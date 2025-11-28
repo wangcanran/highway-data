@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>货车数据分析Agent - 智能API推荐系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .gradient-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .tag-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tag-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .tag-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .tag-btn:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .result-card {
+            animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 min-h-screen">
+    
+    <!-- Hero Header -->
+    <header class="gradient-bg text-white relative">
+        <div class="container mx-auto px-4 py-12 relative z-10">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm floating">
+                        <i class="fas fa-truck text-4xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight">
+                            🚛 货车数据分析Agent
+                        </h1>
+                        <p class="text-lg md:text-xl opacity-90 mt-2 font-medium">
+                            智能API推荐 · 点击标签获取最佳接口方案
+                        </p>
+                    </div>
+                </div>
+                <a href="/" class="px-6 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-semibold transition-all backdrop-blur-sm">
+                    <i class="fas fa-home mr-2"></i>返回主页
+                </a>
+            </div>
+            
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-4 gap-4 mt-8">
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-3xl font-bold">11</div>
+                    <div class="text-sm opacity-80">分析维度</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-3xl font-bold">AI</div>
+                    <div class="text-sm opacity-80">智能推荐</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-3xl font-bold">实时</div>
+                    <div class="text-sm opacity-80">数据分析</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-3xl font-bold">专业</div>
+                    <div class="text-sm opacity-80">货运监控</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-12 max-w-7xl">
+        
+        <!-- Tags Section -->
+        <section class="mb-12">
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl p-8 md:p-12 border border-slate-700">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-white mb-3">
+                        <i class="fas fa-brain mr-3 text-orange-500"></i>AI 需求理解
+                    </h2>
+                    <p class="text-gray-400 mb-6">用自然语言描述您的货车数据分析需求，AI会智能推荐最合适的API接口</p>
+                    
+                    <!-- Natural Language Input -->
+                    <div class="flex gap-4 mb-8">
+                        <div class="flex-1 relative">
+                            <i class="fas fa-comment-dots absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-500 text-xl"></i>
+                            <input 
+                                type="text" 
+                                id="queryInput" 
+                                class="w-full pl-14 pr-6 py-5 border-2 border-orange-600 bg-slate-700 text-white rounded-2xl text-lg placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:shadow-lg focus:shadow-orange-500/20 transition-all"
+                                placeholder="💬 描述您的需求，例如：拥堵情况、通行费用、超载比例、高峰时段... 或输入"所有数据"查看全部"
+                            >
+                        </div>
+                        <button 
+                            onclick="queryByInput()" 
+                            class="px-10 py-5 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-2xl hover:scale-105 transition-all"
+                        >
+                            <i class="fas fa-rocket mr-2"></i>AI分析
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                        <i class="fas fa-tags text-orange-500"></i>
+                        快速标签
+                        <span class="text-sm font-normal text-gray-400">(点击填充到输入框)</span>
+                    </h3>
+                </div>
+                
+                <!-- Analytics Tags Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    <!-- Tag 1: 流量分析 -->
+                    <button onclick="queryByTag('货车流量分析')" class="tag-btn group relative px-6 py-8 bg-gradient-to-br from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white rounded-2xl font-bold text-lg border-2 border-blue-700 hover:border-blue-500">
+                        <div class="relative z-10">
+                            <i class="fas fa-chart-line text-4xl mb-3 group-hover:scale-110 transition-transform"></i>
+                            <div class="text-base">流量分析</div>
+                            <div class="text-xs opacity-75 mt-1">Traffic Flow</div>
+                        </div>
+                    </button>
+                    
+                    <!-- Tag 2: 通行时间 -->
+                    <button onclick="queryByTag('货车通行时间')" class="tag-btn group relative px-6 py-8 bg-gradient-to-br from-purple-900 to-purple-800 hover:from-purple-800 hover:to-purple-700 text-white rounded-2xl font-bold text-lg border-2 border-purple-700 hover:border-purple-500">
+                        <div class="relative z-10">
+                            <i class="fas fa-clock text-4xl mb-3 group-hover:scale-110 transition-transform"></i>
+                            <div class="text-base">通行时间</div>
+                            <div class="text-xs opacity-75 mt-1">Travel Time</div>
+                        </div>
+                    </button>
+                    
+                    <!-- Tag 3: 通行费用 -->
+                    <button onclick="queryByTag('货车通行费分析')" class="tag-btn group relative px-6 py-8 bg-gradient-to-br from-green-900 to-green-800 hover:from-green-800 hover:to-green-700 text-white rounded-2xl font-bold text-lg border-2 border-green-700 hover:border-green-500">
+                        <div class="relative z-10">
+                            <i class="fas fa-dollar-sign text-4xl mb-3 group-hover:scale-110 transition-transform"></i>
+                            <div class="text-base">通行费用</div>
+                            <div class="text-xs opacity-75 mt-1">Toll Fee</div>
+                        </div>
+                    </button>
+                    
+                    <!-- Tag 4: 拥堵指数 -->
+                    <button onclick="queryByTag('货车拥堵指数')" class="tag-btn group relative px-6 py-8 bg-gradient-to-br from-red-900 to-red-800 hover:from-red-800 hover:to-red-700 text-white rounded-2xl font-bold text-lg border-2 border-red-700 hover:border-red-500">
+                        <div class="relative z-10">
+                            <i class="fas fa-traffic-light text-4xl mb-3 group-hover:scale-110 transition-transform"></i>
+                            <div class="text-base">拥堵指数</div>
+                            <div class="text-xs opacity-75 mt-1">Congestion</div>
+                        </div>
+                    </button>
+                    
+                    <!-- Tag 5: 超载监测 -->
+                    <button onclick="queryByTag('货车超载监测')" class="tag-btn group relative px-6 py-8 bg-gradient-to-br from-yellow-900 to-yellow-800 hover:from-yellow-800 hover:to-yellow-700 text-white rounded-2xl font-bold text-lg border-2 border-yellow-700 hover:border-yellow-500">
+                        <div class="relative z-10">
+                            <i class="fas fa-weight text-4xl mb-3 group-hover:scale-110 transition-transform"></i>
+                            <div class="text-base">超载监测</div>
+                            <div class="text-xs opacity-75 mt-1">Overweight</div>
+                        </div>
+                    </button>
+                    
+                    <!-- Tag 6: 优惠分析 -->
+                    <button onclick="queryByTag('货车优惠分析')" class="tag-btn group relative px-6 py-8 bg-gradient-to-br from-indigo-900 to-indigo-800 hover:from-indigo-800 hover:to-indigo-700 text-white rounded-2xl font-bold text-lg border-2 border-indigo-700 hover:border-indigo-500">
+                        <div class="relative z-10">
+                            <i class="fas fa-tags text-4xl mb-3 group-hover:scale-110 transition-transform"></i>
+                            <div class="text-base">优惠分析</div>
+                            <div class="text-xs opacity-75 mt-1">Discount</div>
+                        </div>
+                    </button>
+                    
+                    <!-- Tag 7: 高峰时段 -->
+                    <button onclick="queryByTag('货车高峰时段')" class="tag-btn group relative px-6 py-8 bg-gradient-to-br from-pink-900 to-pink-800 hover:from-pink-800 hover:to-pink-700 text-white rounded-2xl font-bold text-lg border-2 border-pink-700 hover:border-pink-500">
+                        <div class="relative z-10">
+                            <i class="fas fa-calendar-alt text-4xl mb-3 group-hover:scale-110 transition-transform"></i>
+                            <div class="text-base">高峰时段</div>
+                            <div class="text-xs opacity-75 mt-1">Peak Hours</div>
+                        </div>
+                    </button>
+                    
+                    <!-- Tag 8: 轴数分析 -->
+                    <button onclick="queryByTag('货车轴数分析')" class="tag-btn group relative px-6 py-8 bg-gradient-to-br from-teal-900 to-teal-800 hover:from-teal-800 hover:to-teal-700 text-white rounded-2xl font-bold text-lg border-2 border-teal-700 hover:border-teal-500">
+                        <div class="relative z-10">
+                            <i class="fas fa-truck-moving text-4xl mb-3 group-hover:scale-110 transition-transform"></i>
+                            <div class="text-base">轴数分析</div>
+                            <div class="text-xs opacity-75 mt-1">Axle Count</div>
+                        </div>
+                    </button>
+                    
+                    <!-- Tag 9: 车道利用 -->
+                    <button onclick="queryByTag('车道利用率')" class="tag-btn group relative px-6 py-8 bg-gradient-to-br from-cyan-900 to-cyan-800 hover:from-cyan-800 hover:to-cyan-700 text-white rounded-2xl font-bold text-lg border-2 border-cyan-700 hover:border-cyan-500">
+                        <div class="relative z-10">
+                            <i class="fas fa-road text-4xl mb-3 group-hover:scale-110 transition-transform"></i>
+                            <div class="text-base">车道利用</div>
+                            <div class="text-xs opacity-75 mt-1">Lane Usage</div>
+                        </div>
+                    </button>
+                    
+                    <!-- Tag 10: 站点状态 -->
+                    <button onclick="queryByTag('收费站运行状态')" class="tag-btn group relative px-6 py-8 bg-gradient-to-br from-lime-900 to-lime-800 hover:from-lime-800 hover:to-lime-700 text-white rounded-2xl font-bold text-lg border-2 border-lime-700 hover:border-lime-500">
+                        <div class="relative z-10">
+                            <i class="fas fa-heartbeat text-4xl mb-3 group-hover:scale-110 transition-transform"></i>
+                            <div class="text-base">站点状态</div>
+                            <div class="text-xs opacity-75 mt-1">Station Status</div>
+                        </div>
+                    </button>
+                    
+                    <!-- Tag 11: 出口数据k匿名 -->
+                    <button onclick="queryByTag('货车出口交易数据k匿名')" class="tag-btn group relative px-6 py-8 bg-gradient-to-br from-emerald-900 to-emerald-800 hover:from-emerald-800 hover:to-emerald-700 text-white rounded-2xl font-bold text-lg border-2 border-emerald-700 hover:border-emerald-500">
+                        <div class="relative z-10">
+                            <i class="fas fa-shield-alt text-4xl mb-3 group-hover:scale-110 transition-transform"></i>
+                            <div class="text-base">出口k匿名</div>
+                            <div class="text-xs opacity-75 mt-1">k-Anonymity</div>
+                        </div>
+                    </button>
+                </div>
+                
+                <!-- Quick Tips -->
+                <div class="mt-8 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border-2 border-blue-800/50 rounded-xl p-6">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-blue-900/60 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-lightbulb text-yellow-300 text-xl"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                                💡 使用技巧
+                            </h4>
+                            <ul class="text-gray-300 text-sm space-y-2">
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-check-circle text-green-400 mt-0.5"></i>
+                                    <span>直接描述需求：如"查看拥堵情况"、"分析通行费"</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-check-circle text-green-400 mt-0.5"></i>
+                                    <span>点击上方快速标签可自动填充查询内容</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-check-circle text-green-400 mt-0.5"></i>
+                                    <span>想看全部？输入"所有数据"或"全部功能"即可展示所有API</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-check-circle text-green-400 mt-0.5"></i>
+                                    <span>AI会根据您的需求智能推荐最合适的API接口</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Loading State -->
+                <div id="loading" class="hidden text-center py-16 mt-8">
+                    <div class="inline-block">
+                        <div class="w-20 h-20 border-8 border-orange-900 border-t-orange-400 rounded-full spinner"></div>
+                    </div>
+                    <p class="text-gray-300 mt-6 text-lg font-medium">
+                        <span class="pulse-dot inline-block w-2 h-2 bg-orange-600 rounded-full mr-2"></span>
+                        AI正在分析您的需求...
+                        <span class="pulse-dot inline-block w-2 h-2 bg-orange-600 rounded-full ml-2"></span>
+                    </p>
+                </div>
+                
+                <!-- Results Section -->
+                <div id="results" class="hidden mt-8 space-y-6">
+                    <!-- Analysis Card -->
+                    <div class="result-card bg-gradient-to-br from-orange-900/40 to-red-900/40 border-2 border-orange-700 rounded-2xl p-6 shadow-2xl">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-robot text-white text-xl"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white">AI 需求分析结果</h3>
+                        </div>
+                        <div class="bg-slate-800/80 p-6 rounded-xl mb-4">
+                            <p id="explanation" class="text-gray-300 text-lg leading-relaxed"></p>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="bg-purple-900/40 border-2 border-purple-700 rounded-xl p-5">
+                                <h5 class="font-bold text-purple-300 mb-3 text-lg flex items-center gap-2">
+                                    <i class="fas fa-bullseye"></i>识别场景
+                                </h5>
+                                <p id="scenario" class="text-gray-300"></p>
+                            </div>
+                            <div class="bg-blue-900/40 border-2 border-blue-700 rounded-xl p-5">
+                                <h5 class="font-bold text-blue-300 mb-3 text-lg flex items-center gap-2">
+                                    <i class="fas fa-database"></i>所需数据类型
+                                </h5>
+                                <div id="dataTypes" class="flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- API List Card -->
+                    <div class="result-card bg-slate-800 border-2 border-slate-700 rounded-2xl p-6 shadow-2xl">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-list-ul text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold text-white">推荐的API接口</h3>
+                                <p class="text-sm text-gray-400 mt-1">共找到 <span id="apiCount" class="text-green-400 font-bold text-lg">0</span> 个相关接口</p>
+                            </div>
+                        </div>
+                        <div id="apiList" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Back to Top Button -->
+    <button id="backToTop" 
+            onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" 
+            class="hidden fixed bottom-8 right-8 w-14 h-14 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white rounded-full shadow-2xl hover:shadow-orange-500/50 transition-all hover:scale-110 z-50">
+        <i class="fas fa-arrow-up text-xl"></i>
+    </button>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-10 mt-20 border-t border-gray-800">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-8">
+                <div class="flex items-center justify-center gap-3 mb-4">
+                    <i class="fas fa-truck text-3xl text-orange-500"></i>
+                    <h3 class="text-2xl font-bold">货车数据分析Agent</h3>
+                </div>
+                <p class="text-gray-400 mb-4">基于AI的智能API推荐系统 · 支持11种专业分析维度（含出口数据k-匿名隐私保护）</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8 mb-8 text-center md:text-left">
+                <div>
+                    <h4 class="font-bold text-lg mb-3 text-orange-400">🎯 核心功能</h4>
+                    <ul class="text-gray-400 text-sm space-y-2">
+                        <li>• 自然语言理解</li>
+                        <li>• 智能API推荐</li>
+                        <li>• 实时数据分析</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg mb-3 text-orange-400">📊 分析维度</h4>
+                    <ul class="text-gray-400 text-sm space-y-2">
+                        <li>• 流量 · 时间 · 费用</li>
+                        <li>• 拥堵 · 合规 · 优惠</li>
+                        <li>• 高峰 · 轴数 · 车道 · 站点</li>
+                        <li>• 🔒 出口数据k-匿名保护</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg mb-3 text-orange-400">⚡ 技术栈</h4>
+                    <ul class="text-gray-400 text-sm space-y-2">
+                        <li>• Flask Backend</li>
+                        <li>• OpenAI GPT-4</li>
+                        <li>• Tailwind CSS</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-800 pt-6 text-center">
+                <p class="text-gray-500 text-sm">
+                    &copy; 2024 高速公路货车数据分析Agent · All Rights Reserved
+                </p>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        const baseUrl = window.location.origin;
+        
+        // Back to top button visibility
+        window.addEventListener('scroll', function() {
+            const backToTop = document.getElementById('backToTop');
+            if (window.scrollY > 300) {
+                backToTop.classList.remove('hidden');
+            } else {
+                backToTop.classList.add('hidden');
+            }
+        });
+
+        // Fill tag text to input and trigger query
+        function queryByTag(tagName) {
+            const input = document.getElementById('queryInput');
+            if (input) {
+                input.value = tagName;
+                queryByInput();
+            }
+        }
+
+        // Query by input text
+        async function queryByInput() {
+            const input = document.getElementById('queryInput');
+            if (!input) {
+                console.error('查询输入框不存在');
+                return;
+            }
+            
+            const query = input.value.trim();
+            if (!query) {
+                alert('💭 请输入您的货车分析需求');
+                return;
+            }
+
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            
+            if (!loading || !results) {
+                console.error('页面元素未找到');
+                return;
+            }
+            
+            loading.classList.remove('hidden');
+            results.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${baseUrl}/api/agent/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const data = await response.json();
+                
+                loading.classList.add('hidden');
+                
+                if (data.understood) {
+                    displayResults(data);
+                    results.classList.remove('hidden');
+                    
+                    // Smooth scroll to results with offset
+                    setTimeout(() => {
+                        results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                } else {
+                    // 显示友好的错误提示
+                    showErrorMessage(data.message || 'AI暂时无法理解您的需求', data.available_tags);
+                }
+            } catch (error) {
+                loading.classList.add('hidden');
+                showErrorMessage('查询服务出现问题，请稍后重试', null, error.message);
+            }
+        }
+        
+        function showErrorMessage(message, tags, technicalDetail) {
+            const results = document.getElementById('results');
+            results.innerHTML = `
+                <div class="result-card bg-gradient-to-br from-red-900/40 to-orange-900/40 border-2 border-red-700 rounded-2xl p-8 text-center">
+                    <div class="w-20 h-20 bg-red-900/60 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-exclamation-triangle text-4xl text-red-300"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-3">未能理解您的需求</h3>
+                    <p class="text-gray-300 text-lg mb-6">${message}</p>
+                    ${technicalDetail ? `<p class="text-gray-500 text-sm mb-6">技术详情: ${technicalDetail}</p>` : ''}
+                    ${tags ? `
+                        <div class="bg-slate-800/50 rounded-xl p-6 mt-6">
+                            <p class="text-gray-400 mb-4">💡 您可以尝试以下标签：</p>
+                            <div class="flex flex-wrap gap-2 justify-center">
+                                ${tags.slice(0, 5).map(tag => `
+                                    <button onclick="queryByTag('${tag.name}')" 
+                                            class="px-4 py-2 bg-blue-900/60 hover:bg-blue-800 text-blue-300 rounded-lg text-sm font-semibold border border-blue-700 transition-all hover:scale-105">
+                                        ${tag.name}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    <button onclick="document.getElementById('queryInput').focus()" 
+                            class="mt-6 px-6 py-3 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-bold transition-all hover:scale-105">
+                        <i class="fas fa-redo mr-2"></i>重新输入
+                    </button>
+                </div>
+            `;
+            results.classList.remove('hidden');
+            results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        function displayNoResults() {
+            const results = document.getElementById('results');
+            results.innerHTML = `
+                <div class="result-card bg-gradient-to-br from-blue-900/40 to-indigo-900/40 border-2 border-blue-700 rounded-2xl p-12 text-center">
+                    <div class="w-24 h-24 bg-blue-900/60 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-search text-5xl text-blue-300"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-4">未找到匹配的API</h3>
+                    <p class="text-gray-300 text-lg mb-6">请尝试使用其他关键词或点击上方的快速标签</p>
+                    <button onclick="location.reload()" 
+                            class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all hover:scale-105">
+                        <i class="fas fa-refresh mr-2"></i>刷新页面
+                    </button>
+                </div>
+            `;
+            results.classList.remove('hidden');
+            results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        function displaySuccessMessage(count) {
+            if (count === 0) {
+                displayNoResults();
+                return;
+            }
+            
+            // 添加成功提示动画
+            const apiCount = document.getElementById('apiCount');
+            if (apiCount) {
+                apiCount.classList.add('animate-pulse');
+                setTimeout(() => {
+                    apiCount.classList.remove('animate-pulse');
+                }, 1000);
+            }
+        }
+
+        function displayResults(data) {
+            // Display explanation - 添加安全检查
+            const explanationEl = document.getElementById('explanation');
+            if (explanationEl && data.explanation) {
+                explanationEl.textContent = data.explanation;
+            }
+            
+            // Display scenario - 兼容两种格式
+            const analysis = data.requirement_analysis || data.step1_requirement_analysis;
+            if (analysis) {
+                const scenarioEl = document.getElementById('scenario');
+                if (scenarioEl && analysis.scenario) {
+                    scenarioEl.textContent = analysis.scenario;
+                }
+                
+                // Display matched tags
+                const dataTypesContainer = document.getElementById('dataTypes');
+                if (dataTypesContainer) {
+                    dataTypesContainer.innerHTML = '';
+                    
+                    // 显示标签名称
+                    const tagNames = analysis.tag_names || analysis.required_data_types || [];
+                    tagNames.forEach(tagName => {
+                        const badge = document.createElement('span');
+                        badge.className = 'px-4 py-2 bg-blue-900/60 text-blue-300 rounded-full text-sm font-bold border-2 border-blue-700';
+                        badge.textContent = tagName;
+                        dataTypesContainer.appendChild(badge);
+                    });
+                }
+            }
+            
+            // Display API count with animation
+            const apiCountEl = document.getElementById('apiCount');
+            if (apiCountEl && data.recommendations) {
+                const apiCount = data.recommendations.length;
+                apiCountEl.textContent = apiCount;
+                displaySuccessMessage(apiCount);
+            }
+            
+            // Display API list
+            const apiListContainer = document.getElementById('apiList');
+            if (!apiListContainer || !data.recommendations) {
+                return;
+            }
+            
+            apiListContainer.innerHTML = '';
+            
+            data.recommendations.forEach((api, index) => {
+                const apiCard = document.createElement('div');
+                apiCard.className = 'bg-gradient-to-br from-slate-700 to-slate-800 border-2 border-slate-600 rounded-2xl p-6 hover:border-orange-600 hover:shadow-2xl transition-all duration-300 hover:scale-[1.01]';
+                
+                // Build use cases HTML if available
+                let useCasesHTML = '';
+                if (api.use_cases && api.use_cases.length > 0) {
+                    useCasesHTML = `
+                        <div class="mb-5">
+                            <h6 class="text-sm font-bold text-gray-400 mb-3 flex items-center gap-2">
+                                <i class="fas fa-lightbulb"></i>适用场景
+                            </h6>
+                            <div class="flex flex-wrap gap-2">
+                                ${api.use_cases.map(useCase => `
+                                    <span class="px-3 py-1.5 bg-indigo-900/60 text-indigo-300 rounded-lg text-xs font-semibold border border-indigo-700">
+                                        ${useCase}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Build tag HTML if available
+                let tagHTML = '';
+                if (api.tag_name) {
+                    tagHTML = `
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-900/60 text-orange-300 rounded-lg text-sm font-bold border border-orange-700">
+                            <i class="fas fa-tag"></i>${api.tag_name}
+                        </div>
+                    `;
+                }
+                
+                // Build parameters HTML
+                let paramsHTML = '';
+                if (api.parameters && api.parameters.length > 0) {
+                    // 分类参数
+                    const requiredParams = api.parameters.filter(p => p.required);
+                    const optionalParams = api.parameters.filter(p => !p.required);
+                    
+                    paramsHTML = `
+                        <div class="mb-5">
+                            <h6 class="text-sm font-bold text-gray-400 mb-3 flex items-center gap-2">
+                                <i class="fas fa-cog"></i>参数说明
+                                <span class="text-xs font-normal text-gray-500">
+                                    (${requiredParams.length} 个必需, ${optionalParams.length} 个可选)
+                                </span>
+                            </h6>
+                            <div class="bg-slate-900/50 rounded-lg p-4 space-y-2.5">
+                                ${api.parameters.map(param => `
+                                    <div class="flex items-start gap-2.5 text-sm group hover:bg-slate-800/50 p-2 rounded-lg transition-colors">
+                                        <code class="bg-slate-800 px-3 py-1.5 rounded-lg text-purple-400 font-mono text-xs flex-shrink-0">${param.name}</code>
+                                        ${param.required ? 
+                                            '<span class="px-2.5 py-1 bg-red-900/80 text-red-300 rounded-md text-xs font-bold flex-shrink-0">必需</span>' : 
+                                            '<span class="px-2.5 py-1 bg-gray-700/80 text-gray-400 rounded-md text-xs flex-shrink-0">可选</span>'
+                                        }
+                                        <span class="text-gray-400 group-hover:text-gray-300 transition-colors">${param.description}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                apiCard.innerHTML = `
+                    <div class="flex items-start justify-between mb-5">
+                        <div class="flex items-start gap-4 flex-1">
+                            <div class="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center text-2xl font-bold text-white shadow-lg flex-shrink-0">
+                                ${index + 1}
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2 flex-wrap">
+                                    <h5 class="text-xl font-bold text-white">${api.api_name || api.description}</h5>
+                                    ${tagHTML}
+                                </div>
+                                <p class="text-sm text-gray-400 leading-relaxed">${api.description}</p>
+                            </div>
+                        </div>
+                        <span class="px-4 py-2 bg-green-900/60 text-green-300 rounded-xl text-sm font-bold border-2 border-green-700 flex-shrink-0 ml-4">
+                            ${api.method}
+                        </span>
+                    </div>
+                    
+                    ${useCasesHTML}
+                    
+                    <div class="grid md:grid-cols-2 gap-4 mb-5">
+                        <div>
+                            <h6 class="text-sm font-bold text-gray-400 mb-2 flex items-center gap-2">
+                                <i class="fas fa-link"></i>API端点
+                            </h6>
+                            <div class="bg-slate-900 rounded-lg p-3 overflow-x-auto border border-slate-700">
+                                <code class="text-blue-400 text-sm font-mono">${api.endpoint}</code>
+                            </div>
+                        </div>
+                        <div>
+                            <h6 class="text-sm font-bold text-gray-400 mb-2 flex items-center gap-2">
+                                <i class="fas fa-server"></i>完整URL
+                            </h6>
+                            <div class="bg-slate-900 rounded-lg p-3 overflow-x-auto border border-slate-700">
+                                <code class="text-cyan-400 text-sm font-mono break-all">${api.full_url}</code>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${paramsHTML}
+                    
+                    <div class="mb-5">
+                        <h6 class="text-sm font-bold text-gray-400 mb-2 flex items-center gap-2">
+                            <i class="fas fa-code"></i>调用示例
+                        </h6>
+                        <div class="bg-slate-900 rounded-lg p-4 overflow-x-auto border border-slate-700">
+                            <code class="text-green-400 text-sm font-mono break-all">${api.example_url}</code>
+                        </div>
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="copyToClipboard('${api.example_url.replace(/'/g, "\\'")}', 'API示例URL')" 
+                                    class="px-4 py-2 bg-purple-900/60 hover:bg-purple-800 text-purple-300 rounded-lg text-sm font-semibold border border-purple-700 transition-all hover:scale-105">
+                                <i class="fas fa-copy mr-2"></i>复制示例URL
+                            </button>
+                            <button onclick="window.open('${api.example_url}', '_blank')" 
+                                    class="px-4 py-2 bg-blue-900/60 hover:bg-blue-800 text-blue-300 rounded-lg text-sm font-semibold border border-blue-700 transition-all hover:scale-105">
+                                <i class="fas fa-external-link-alt mr-2"></i>在新窗口测试
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h6 class="text-sm font-bold text-gray-400 flex items-center gap-2">
+                                <i class="fas fa-file-code"></i>响应示例
+                                ${api.response_example_before ? '<span class="ml-2 px-2 py-0.5 bg-yellow-900/50 text-yellow-400 text-xs rounded">已启用数据脱敏</span>' : ''}
+                            </h6>
+                            <button onclick="copyToClipboard(JSON.stringify(${JSON.stringify(api.response_example)}, null, 2), '响应示例')" 
+                                    class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-xs font-semibold transition-all">
+                                <i class="fas fa-copy mr-1"></i>复制JSON
+                            </button>
+                        </div>
+                        ${api.response_example_before ? `
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-xs text-red-400 mb-1 font-semibold"><i class="fas fa-times-circle mr-1"></i>处理前（原始数据）</div>
+                                <div class="bg-red-950/30 rounded-lg p-3 overflow-x-auto max-h-60 border border-red-900/50">
+                                    <pre class="text-gray-400 text-xs font-mono leading-relaxed">${JSON.stringify(api.response_example_before, null, 2)}</pre>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-green-400 mb-1 font-semibold"><i class="fas fa-check-circle mr-1"></i>处理后（脱敏数据）</div>
+                                <div class="bg-green-950/30 rounded-lg p-3 overflow-x-auto max-h-60 border border-green-900/50">
+                                    <pre class="text-green-300 text-xs font-mono leading-relaxed">${JSON.stringify(api.response_example, null, 2)}</pre>
+                                </div>
+                            </div>
+                        </div>
+                        ` : `
+                        <div class="bg-slate-900 rounded-lg p-4 overflow-x-auto max-h-80 border border-slate-700">
+                            <pre class="text-gray-300 text-xs font-mono leading-relaxed">${JSON.stringify(api.response_example, null, 2)}</pre>
+                        </div>
+                        `}
+                    </div>
+                `;
+                
+                apiListContainer.appendChild(apiCard);
+            });
+        }
+
+        function copyToClipboard(text, label = '内容') {
+            navigator.clipboard.writeText(text).then(() => {
+                alert(`✅ ${label}已复制到剪贴板！`);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                alert('❌ 复制失败，请手动复制');
+            });
+        }
+
+        // Enter key support
+        const queryInput = document.getElementById('queryInput');
+        if (queryInput) {
+            queryInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    queryByInput();
+                }
+            });
+            
+            // Auto focus on input
+            window.addEventListener('load', function() {
+                queryInput.focus();
+            });
+        }
+    </script>
+</body>
+</html>

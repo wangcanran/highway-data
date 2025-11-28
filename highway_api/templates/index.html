@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高速公路AI查询系统 - 智能数据分析平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #4c1d95 0%, #5b21b6 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .gradient-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .query-input {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .query-input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.25), 0 10px 15px -3px rgba(139, 92, 246, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(124, 58, 237, 0.5);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .example-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+        }
+        
+        .example-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+            border-color: currentColor;
+        }
+        
+        .code-block {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #10b981;
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            font-family: 'Courier New', monospace;
+        }
+        
+        .result-card {
+            animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        
+        .feature-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid #374151;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 25px 50px rgba(102, 126, 234, 0.3);
+            border-color: #8b5cf6;
+        }
+        
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.875rem;
+        }
+        
+        table tbody tr {
+            transition: all 0.2s ease;
+        }
+        
+        table tbody tr:hover {
+            background-color: #374151;
+            transform: scale(1.01);
+        }
+        
+        .stat-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 min-h-screen">
+    
+    <!-- Hero Header -->
+    <header class="gradient-bg text-white relative">
+        <div class="container mx-auto px-4 py-12 relative z-10">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm floating">
+                        <i class="fas fa-road text-3xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight">
+                            高速公路AI查询系统
+                        </h1>
+                        <p class="text-lg md:text-xl opacity-90 mt-2 font-medium">
+                            🚀 智能数据分析 · 自然语言查询 · 实时结果展示
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-3 gap-4 mt-8">
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-3xl font-bold">5ms</div>
+                    <div class="text-sm opacity-80">平均响应时间</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-3xl font-bold">100%</div>
+                    <div class="text-sm opacity-80">SQL安全保护</div>
+                </div>
+                <div class="glass-card rounded-xl p-4 text-center">
+                    <div class="text-3xl font-bold">24/7</div>
+                    <div class="text-sm opacity-80">全天候服务</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-12 max-w-7xl">
+        
+        <!-- AI Query Section -->
+        <section class="mb-12">
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl p-8 md:p-12 border border-slate-700">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-magic text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold text-white">AI 自然语言查询</h2>
+                        <p class="text-gray-400 text-sm mt-1">无需SQL知识，直接用中文描述您的查询需求</p>
+                    </div>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="flex gap-4 mb-8">
+                    <div class="flex-1 relative">
+                        <i class="fas fa-search absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg"></i>
+                        <input 
+                            type="text" 
+                            id="queryInput" 
+                            class="w-full pl-14 pr-6 py-5 border-2 border-slate-600 bg-slate-700 text-white rounded-2xl query-input text-lg placeholder-gray-400"
+                            placeholder="例如：查询所有路段、统计收费站数量、查询货车通行费..."
+                        >
+                    </div>
+                    <button 
+                        onclick="queryAI()" 
+                        class="px-10 py-5 btn-primary text-white rounded-2xl font-bold text-lg shadow-lg"
+                    >
+                        <i class="fas fa-rocket mr-2"></i>开始查询
+                    </button>
+                </div>
+
+                <!-- Truck Agent Entry Card -->
+                <div class="mb-8 space-y-4">
+                    <a href="/truck-agent" class="block group">
+                        <div class="bg-gradient-to-r from-orange-900/40 to-red-900/40 border-2 border-orange-700 rounded-2xl p-6 hover:from-orange-900/60 hover:to-red-900/60 hover:border-orange-500 transition-all hover:shadow-2xl hover:scale-[1.02]">
+                            <div class="flex items-center gap-4">
+                                <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                                    <i class="fas fa-truck text-white text-3xl"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="font-bold text-white text-2xl mb-2 flex items-center gap-2">
+                                        🚛 货车数据分析Agent
+                                        <i class="fas fa-arrow-right text-orange-400 text-xl group-hover:translate-x-2 transition-transform"></i>
+                                    </h3>
+                                    <p class="text-gray-400 text-sm">
+                                        💬 自然语言描述需求 · AI智能理解并推荐API · 11个快速标签 · 独立工作空间
+                                    </p>
+                                </div>
+                                <div class="text-center hidden md:block">
+                                    <div class="text-3xl font-bold text-orange-400">11</div>
+                                    <div class="text-xs text-gray-400">分析标签</div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Data Synthesis Entry Card -->
+                    <a href="/data-synthesis" class="block group">
+                        <div class="bg-gradient-to-r from-indigo-900/40 to-sky-900/40 border-2 border-indigo-700 rounded-2xl p-6 hover:from-indigo-900/60 hover:to-sky-900/60 hover:border-indigo-500 transition-all hover:shadow-2xl hover:scale-[1.02]">
+                            <div class="flex items-center gap-4">
+                                <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-sky-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                                    <i class="fas fa-random text-white text-3xl"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="font-bold text-white text-2xl mb-2 flex items-center gap-2">
+                                        🎲 数据合成服务
+                                        <i class="fas fa-arrow-right text-indigo-400 text-xl group-hover:translate-x-2 transition-transform"></i>
+                                    </h3>
+                                    <p class="text-gray-400 text-sm">
+                                        规则生成 + CTGAN 模型生成门架交易数据，提供统一 API 接口与请求/响应示例
+                                    </p>
+                                </div>
+                                <div class="text-center hidden md:block">
+                                    <div class="text-3xl font-bold text-indigo-400">2</div>
+                                    <div class="text-xs text-gray-400">生成模式</div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Quick Examples -->
+                <div class="mb-8">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-lightbulb text-yellow-400 text-xl"></i>
+                        <h3 class="font-bold text-white">SQL查询示例</h3>
+                        <span class="text-sm text-gray-400">(点击直接查询)</span>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <button onclick="runQuery('查询所有路段')" class="example-btn px-4 py-3 bg-blue-900/50 hover:bg-blue-800 text-blue-300 rounded-xl font-medium border border-blue-700">
+                            <i class="fas fa-road mr-2"></i>查询所有路段
+                        </button>
+                        <button onclick="runQuery('统计每个路段有多少个收费站')" class="example-btn px-4 py-3 bg-green-900/50 hover:bg-green-800 text-green-300 rounded-xl font-medium border border-green-700">
+                            <i class="fas fa-chart-bar mr-2"></i>统计收费站
+                        </button>
+                        <button onclick="runQuery('查询最近5条出口交易记录')" class="example-btn px-4 py-3 bg-purple-900/50 hover:bg-purple-800 text-purple-300 rounded-xl font-medium border border-purple-700">
+                            <i class="fas fa-history mr-2"></i>最近交易
+                        </button>
+                        <button onclick="runQuery('统计车型为11的车辆的总通行费')" class="example-btn px-4 py-3 bg-orange-900/50 hover:bg-orange-800 text-orange-300 rounded-xl font-medium border border-orange-700">
+                            <i class="fas fa-truck mr-2"></i>货车费用
+                        </button>
+                        <button onclick="runQuery('查询大关至永善高速的收费站')" class="example-btn px-4 py-3 bg-yellow-900/50 hover:bg-yellow-800 text-yellow-300 rounded-xl font-medium border border-yellow-700">
+                            <i class="fas fa-search-location mr-2"></i>特定路段
+                        </button>
+                        <button onclick="runQuery('查询所有门架')" class="example-btn px-4 py-3 bg-red-900/50 hover:bg-red-800 text-red-300 rounded-xl font-medium border border-red-700">
+                            <i class="fas fa-archway mr-2"></i>门架信息
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loading" class="hidden text-center py-16">
+                    <div class="inline-block">
+                        <div class="w-20 h-20 border-8 border-purple-900 border-t-purple-400 rounded-full spinner"></div>
+                    </div>
+                    <p class="text-gray-300 mt-6 text-lg font-medium">
+                        <span class="pulse-dot inline-block w-2 h-2 bg-purple-600 rounded-full mr-2"></span>
+                        AI正在分析您的查询...
+                        <span class="pulse-dot inline-block w-2 h-2 bg-purple-600 rounded-full ml-2"></span>
+                    </p>
+                </div>
+
+                <!-- Results Section -->
+                <div id="results" class="hidden space-y-6">
+                    <!-- SQL Card -->
+                    <div class="result-card bg-gradient-to-br from-purple-900/30 via-blue-900/30 to-indigo-900/30 border-2 border-purple-700 rounded-2xl p-6 shadow-lg">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-database text-white"></i>
+                            </div>
+                            <h4 class="text-xl font-bold text-white">AI 生成的SQL语句</h4>
+                        </div>
+                        <div class="code-block mb-4">
+                            <code id="generatedSQL" class="text-base"></code>
+                        </div>
+                        <p id="sqlExplanation" class="text-sm text-gray-300 mb-3 bg-slate-800/70 p-4 rounded-lg"></p>
+                        <div class="flex flex-wrap gap-3">
+                            <span id="queryType" class="stat-badge bg-blue-900/50 text-blue-300 border border-blue-700"></span>
+                            <span id="resultCount" class="stat-badge bg-green-900/50 text-green-300 border border-green-700"></span>
+                        </div>
+                    </div>
+
+                    <!-- API Endpoint Card -->
+                    <div id="apiEndpointSection" class="result-card hidden bg-blue-900/30 border-2 border-blue-700 rounded-2xl p-6 shadow-lg">
+                        <div class="flex items-center gap-3 mb-3">
+                            <i class="fas fa-link text-blue-600 text-xl"></i>
+                            <h5 class="font-bold text-blue-300 text-lg">可复用的API端点</h5>
+                        </div>
+                        <div class="bg-slate-800 rounded-xl p-4 font-mono text-sm border border-blue-800">
+                            <code id="apiEndpoint" class="text-blue-400"></code>
+                        </div>
+                        <p class="text-xs text-blue-400 mt-3 flex items-center gap-2">
+                            <i class="fas fa-info-circle"></i>
+                            您可以直接调用此API进行重复查询
+                        </p>
+                    </div>
+
+                    <!-- Data Results Card -->
+                    <div class="result-card bg-slate-800 border-2 border-slate-700 rounded-2xl p-6 shadow-lg">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-table text-white"></i>
+                            </div>
+                            <h4 class="text-xl font-bold text-white">查询结果</h4>
+                        </div>
+                        <div id="dataResults" class="overflow-x-auto rounded-xl border border-slate-600"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Grid -->
+        <section class="grid md:grid-cols-3 gap-6 mb-12">
+            <div class="feature-card bg-white rounded-2xl p-6 shadow-lg">
+                <div class="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-check-circle text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">支持的查询类型</h3>
+                <ul class="space-y-2 text-gray-300">
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-chevron-right text-green-500 mt-1"></i>
+                        <span><strong>简单查询：</strong>查询所有数据表</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-chevron-right text-green-500 mt-1"></i>
+                        <span><strong>条件筛选：</strong>按特定条件查询</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-chevron-right text-green-500 mt-1"></i>
+                        <span><strong>统计分析：</strong>聚合计算和统计</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-chevron-right text-green-500 mt-1"></i>
+                        <span><strong>时间范围：</strong>最近N条记录</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="feature-card bg-white rounded-2xl p-6 shadow-lg">
+                <div class="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-shield-alt text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">安全保护机制</h3>
+                <ul class="space-y-2 text-gray-300">
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-lock text-blue-500 mt-1"></i>
+                        <span>仅允许SELECT查询</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-lock text-blue-500 mt-1"></i>
+                        <span>自动检测危险SQL</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-lock text-blue-500 mt-1"></i>
+                        <span>自动添加LIMIT限制</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-lock text-blue-500 mt-1"></i>
+                        <span>参数化查询防注入</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="feature-card bg-white rounded-2xl p-6 shadow-lg">
+                <div class="w-14 h-14 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-database text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-3">数据表结构</h3>
+                <ul class="space-y-2 text-gray-300 text-sm">
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-table text-purple-500 mt-1"></i>
+                        <span><strong>section</strong> - 路段表</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-table text-purple-500 mt-1"></i>
+                        <span><strong>tollstation</strong> - 收费站表</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-table text-purple-500 mt-1"></i>
+                        <span><strong>gantry</strong> - 门架表</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-table text-purple-500 mt-1"></i>
+                        <span><strong>entrancetransaction</strong> - 入口交易</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-table text-purple-500 mt-1"></i>
+                        <span><strong>exittransaction</strong> - 出口交易</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-table text-purple-500 mt-1"></i>
+                        <span><strong>gantrytransaction</strong> - 门架交易</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-10 mt-20">
+        <div class="container mx-auto px-4 text-center">
+            <div class="flex items-center justify-center gap-3 mb-4">
+                <i class="fas fa-road text-3xl text-purple-400"></i>
+                <h3 class="text-2xl font-bold">高速公路AI查询系统</h3>
+            </div>
+            <p class="text-gray-400 mb-4">智能数据分析平台 · 让数据查询更简单</p>
+            <p class="text-gray-500 text-sm">
+                &copy; 2024 Powered by Flask + SQLAlchemy + OpenAI GPT-4
+            </p>
+            <div class="flex items-center justify-center gap-6 mt-6 text-gray-400">
+                <a href="#" class="hover:text-purple-400 transition-colors">
+                    <i class="fab fa-github text-xl"></i>
+                </a>
+                <a href="#" class="hover:text-purple-400 transition-colors">
+                    <i class="fas fa-book text-xl"></i>
+                </a>
+                <a href="#" class="hover:text-purple-400 transition-colors">
+                    <i class="fas fa-question-circle text-xl"></i>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const baseUrl = window.location.origin;
+
+        function runQuery(text) {
+            document.getElementById('queryInput').value = text;
+            queryAI();
+        }
+
+        async function queryAI() {
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) {
+                alert('🔍 请输入您的查询描述');
+                return;
+            }
+
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            
+            loading.classList.remove('hidden');
+            results.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${baseUrl}/api/ai/sql`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query })
+                });
+
+                const data = await response.json();
+                
+                loading.classList.add('hidden');
+                
+                if (data.success) {
+                    displayResults(data);
+                    results.classList.remove('hidden');
+                    
+                    // Smooth scroll to results
+                    results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    alert('❌ 查询失败：' + (data.error || '未知错误'));
+                }
+            } catch (error) {
+                loading.classList.add('hidden');
+                alert('❌ 查询失败：' + error.message);
+            }
+        }
+
+        function displayResults(data) {
+            // Display SQL
+            document.getElementById('generatedSQL').textContent = data.sql;
+            document.getElementById('sqlExplanation').textContent = '💡 ' + data.explanation;
+            document.getElementById('queryType').innerHTML = `<i class="fas fa-tag"></i> 类型: ${data.query_type}`;
+            document.getElementById('resultCount').innerHTML = `<i class="fas fa-list-ol"></i> 结果: ${data.count} 条`;
+            
+            // Display API endpoint if exists
+            const apiEndpointSection = document.getElementById('apiEndpointSection');
+            const apiEndpointEl = document.getElementById('apiEndpoint');
+            if (data.api_endpoint && data.api_endpoint.includes('http')) {
+                apiEndpointEl.textContent = data.api_endpoint;
+                apiEndpointSection.classList.remove('hidden');
+            } else {
+                apiEndpointSection.classList.add('hidden');
+            }
+            
+            // Display data results
+            const dataResults = document.getElementById('dataResults');
+            if (data.count === 0) {
+                dataResults.innerHTML = '<div class="text-center py-12"><i class="fas fa-inbox text-gray-600 text-5xl mb-4"></i><p class="text-gray-400 text-lg">没有查询到数据</p></div>';
+                return;
+            }
+            
+            // Create table
+            const columns = data.columns || Object.keys(data.data[0]);
+            let tableHTML = '<table class="min-w-full">';
+            tableHTML += '<thead><tr>';
+            columns.forEach(col => {
+                tableHTML += `<th class="px-6 py-4 text-left text-xs">${col}</th>`;
+            });
+            tableHTML += '</tr></thead><tbody>';
+            
+            // Add rows (limit to 20 for display)
+            data.data.slice(0, 20).forEach((row, idx) => {
+                tableHTML += `<tr class="${idx % 2 === 0 ? 'bg-slate-900' : 'bg-slate-800/50'}">`;
+                columns.forEach(col => {
+                    let value = row[col];
+                    if (value === null || value === undefined) {
+                        value = '<span class="text-gray-400 italic">NULL</span>';
+                    } else if (typeof value === 'object') {
+                        value = JSON.stringify(value);
+                    }
+                    tableHTML += `<td class="px-6 py-4 text-sm text-gray-300">${value}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+            tableHTML += '</tbody></table>';
+            
+            if (data.count > 20) {
+                tableHTML += `<div class="bg-gradient-to-r from-purple-900/30 to-blue-900/30 p-4 text-center border-t-2 border-purple-700">
+                    <p class="text-sm text-purple-300 font-medium">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        显示前 20 条记录，共 ${data.count} 条数据
+                    </p>
+                </div>`;
+            }
+            
+            dataResults.innerHTML = tableHTML;
+        }
+
+        // Enter key support
+        document.getElementById('queryInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                queryAI();
+            }
+        });
+        
+        // Add focus to input on load
+        window.addEventListener('load', function() {
+            document.getElementById('queryInput').focus();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>数据合成 - 门架交易生成</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #111827, #020617);
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .header-bar {
+      border-bottom: 1px solid rgba(75, 85, 99, 0.8);
+      background: linear-gradient(135deg, #111827, #020617);
+    }
+    .api-card {
+      background: radial-gradient(circle at top left, #020617, #111827);
+      border-radius: 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.8);
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .api-card:hover {
+      transform: translateY(-4px) scale(1.01);
+      border-color: #6366f1;
+      box-shadow: 0 25px 60px rgba(79, 70, 229, 0.55);
+    }
+    .api-badge {
+      border-radius: 999px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    pre {
+      font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background: #020617;
+      color: #22c55e;
+      max-height: 260px;
+      overflow: auto;
+    }
+    code {
+      font-family: inherit;
+    }
+    .btn-soft {
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body>
+  <header class="header-bar py-3 mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-2">
+        <div class="me-2 text-info">
+          <i class="fas fa-random fa-lg"></i>
+        </div>
+        <div>
+          <h1 class="h4 mb-1 text-light">数据合成服务</h1>
+          <p class="mb-0 text-secondary small">规则生成 / CTGAN 模型生成门架交易数据 · 统一 API 接口</p>
+        </div>
+      </div>
+      <a href="/" class="btn btn-outline-light btn-sm btn-soft">
+        <i class="fas fa-home me-1"></i> 返回首页
+      </a>
+    </div>
+  </header>
+
+  <main class="container mb-5">
+    <p class="text-secondary mb-3">
+      使用下列 API 可以合成门架交易数据，用于测试、演示或脱敏场景。推荐在代码中使用 <code>POST /api/generate/gantry</code>，并通过 <code>method</code> 字段切换生成模式。
+    </p>
+
+    <div id="synthesis-api-container" class="row mt-3"></div>
+
+    <p class="text-secondary mt-3 small">
+      提示：响应示例来自真实样本，实际返回字段以当前服务版本为准。
+    </p>
+  </main>
+
+<script>
+(function() {
+  const baseUrl = window.location.origin;
+
+  const apis = [
+    {
+      id: 'rule',
+      title: '规则生成 API',
+      description: '基于规则的门架交易记录生成，字段取值在预定义的“干净值域”内。',
+      method: 'POST',
+      path: '/api/generate/gantry',
+      requestExample: {
+        method: 'rule',
+        count: 3,
+      },
+      responseExample: [
+        {
+          gantry_id: 'S001053001000810010',
+          section_id: 'S0010530010',
+          section_name: '彝良至昭通高速',
+          vehicle_type: '1',
+          axle_count: '2.0',
+          transaction_time: '2023-06-22 00:36:26',
+          pay_fee: 265,
+          discount_fee: 98,
+          fee: '265',
+          fee_mileage: '352.0',
+          total_weight: '0.0',
+          media_type: '1',
+          vehicle_sign: '0xff',
+          transaction_type: '9.0',
+          pass_state: '1.0',
+          entrance_time: '2023-06-21 23:04:26',
+          entrance_lane_type: '03',
+          cpu_card_type: '2.0',
+          fee_prov_begin_hex: '000000',
+          obu_fee_sum_before: '',
+          obu_fee_sum_after: '',
+          pay_fee_prov_sum_local: '',
+          gantry_transaction_id: 'GT20230622003626803845',
+          pass_id: 'P202306220036261564',
+        },
+      ],
+    },
+    {
+      id: 'model',
+      title: '模型生成 API (CTGAN)',
+      description: '使用 CTGAN 在真实门架交易数据上训练得到的生成模型，按学习到的分布生成新样本。',
+      method: 'POST',
+      path: '/api/generate/gantry',
+      requestExample: {
+        method: 'model',
+        count: 3,
+      },
+      responseExample: [
+        {
+          gantry_id: 'G561553012000420010',
+          section_id: 'G5615530120',
+          section_name: '麻文高速',
+          vehicle_type: '13',
+          axle_count: '6.0',
+          transaction_time: '2023-10-06 18:50:25',
+          pay_fee: 448,
+          discount_fee: 0,
+          fee: '448',
+          fee_mileage: '550.8',
+          total_weight: '25000.0',
+          media_type: '2',
+          vehicle_sign: '0xff',
+          transaction_type: '9.0',
+          pass_state: '1.0',
+          entrance_time: '2023-10-06 18:15:25',
+          entrance_lane_type: '03',
+          cpu_card_type: '2.0',
+          fee_prov_begin_hex: '000000',
+          obu_fee_sum_before: '',
+          obu_fee_sum_after: '',
+          pay_fee_prov_sum_local: '',
+          gantry_transaction_id: 'GT20231006185025934423',
+          pass_id: 'P202310061850252573',
+        },
+      ],
+    },
+  ];
+
+  function copyToClipboard(text, label) {
+    try {
+      navigator.clipboard.writeText(text).then(function() {
+        alert((label || '内容') + ' 已复制到剪贴板');
+      });
+    } catch (e) {
+      alert('复制失败: ' + e);
+    }
+  }
+
+  const container = document.getElementById('synthesis-api-container');
+  apis.forEach(api => {
+    const query = `?method=${encodeURIComponent(api.id)}&count=3`;
+    const fullUrl = baseUrl + api.path + query;
+    const requestJson = JSON.stringify(api.requestExample, null, 2);
+    const responseJson = JSON.stringify(api.responseExample, null, 2);
+
+    const col = document.createElement('div');
+    col.className = 'col-md-6 mb-4';
+    const badgeColor = api.id === 'rule' ? 'warning' : 'info';
+    const badgeIcon = api.id === 'rule' ? 'fa-cogs' : 'fa-brain';
+
+    col.innerHTML = `
+      <div class="api-card h-100 p-3">
+        <div class="d-flex flex-column h-100">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div>
+              <span class="api-badge bg-${badgeColor} text-dark me-2">
+                <i class="fas ${badgeIcon}"></i>
+                ${api.id === 'rule' ? '规则生成' : '模型生成'}
+              </span>
+              <span class="fw-semibold text-light">${api.title}</span>
+            </div>
+          </div>
+          <p class="text-secondary small mb-3">${api.description}</p>
+
+          <p class="mt-1 mb-1 small"><strong>URL：</strong><code>${api.method} ${api.path}</code></p>
+          <div class="mb-3 d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-sm btn-outline-light btn-soft" data-copy-url="${fullUrl}">
+              <i class="fas fa-copy me-1"></i>复制完整URL
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-info btn-soft" data-open-url="${fullUrl}">
+              <i class="fas fa-external-link-alt me-1"></i>新窗口测试 (GET 示例)
+            </button>
+          </div>
+
+          <p class="mb-1 small"><strong>请求示例 (JSON)：</strong></p>
+          <pre class="p-2 border border-secondary rounded small mb-2" data-request-example></pre>
+          <div class="mb-3">
+            <button type="button" class="btn btn-sm btn-outline-light btn-soft" data-copy-request>
+              <i class="fas fa-copy me-1"></i>复制请求JSON
+            </button>
+          </div>
+
+          <p class="mb-1 small"><strong>响应示例 (JSON)：</strong></p>
+          <pre class="p-2 border border-secondary rounded small flex-grow-1" data-response-example></pre>
+          <div class="mt-2">
+            <button type="button" class="btn btn-sm btn-outline-light btn-soft" data-copy-response>
+              <i class="fas fa-copy me-1"></i>复制响应JSON
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(col);
+
+    const reqPre = col.querySelector('[data-request-example]');
+    const respPre = col.querySelector('[data-response-example]');
+    if (reqPre) reqPre.textContent = requestJson;
+    if (respPre) respPre.textContent = responseJson;
+
+    const copyUrlBtn = col.querySelector('[data-copy-url]');
+    const openUrlBtn = col.querySelector('[data-open-url]');
+    const copyReqBtn = col.querySelector('[data-copy-request]');
+    const copyRespBtn = col.querySelector('[data-copy-response]');
+
+    if (copyUrlBtn) {
+      copyUrlBtn.addEventListener('click', () => copyToClipboard(fullUrl, 'URL'));
+    }
+    if (openUrlBtn) {
+      openUrlBtn.addEventListener('click', () => window.open(fullUrl, '_blank'));
+    }
+    if (copyReqBtn) {
+      copyReqBtn.addEventListener('click', () => copyToClipboard(requestJson, '请求JSON'));
+    }
+    if (copyRespBtn) {
+      copyRespBtn.addEventListener('click', () => copyToClipboard(responseJson, '响应JSON'));
+    }
+  });
+})();
+</script>
+</body>
+</html>
