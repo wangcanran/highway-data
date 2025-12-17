@@ -7,3 +7,6 @@ PyMySQL==1.1.0
 openai>=2.8.0
 numpy>=1.24.0
 scikit-learn>=1.3.0
+langgraph>=0.2.0
+langchain>=0.3.0
+langchain-openai>=0.2.0

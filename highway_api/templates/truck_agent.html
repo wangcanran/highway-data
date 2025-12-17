@@ -126,8 +126,8 @@
                         </p>
                     </div>
                 </div>
-                <a href="/" class="px-6 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-semibold transition-all backdrop-blur-sm">
-                    <i class="fas fa-home mr-2"></i>返回主页
+                <a href="/old-index" class="px-6 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-semibold transition-all backdrop-blur-sm">
+                    <i class="fas fa-database mr-2"></i>SQL查询
                 </a>
             </div>
             
@@ -156,6 +156,58 @@
     <!-- Main Content -->
     <div class="container mx-auto px-4 py-12 max-w-7xl">
         
+        <!-- 其他功能模块入口 -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-th-large text-orange-500"></i>
+                其他功能模块
+            </h2>
+            <div class="grid md:grid-cols-2 gap-4">
+                <!-- 数据合成服务 -->
+                <a href="/data-synthesis" class="block group">
+                    <div class="bg-gradient-to-r from-indigo-900/40 to-sky-900/40 border-2 border-indigo-700 rounded-xl p-6 hover:from-indigo-900/60 hover:to-sky-900/60 hover:border-indigo-500 transition-all hover:shadow-2xl hover:scale-[1.02]">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-sky-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                                <i class="fas fa-random text-white text-2xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-white text-xl mb-1 flex items-center gap-2">
+                                    🎲 数据合成服务
+                                    <i class="fas fa-arrow-right text-indigo-400 text-sm group-hover:translate-x-2 transition-transform"></i>
+                                </h3>
+                                <p class="text-gray-400 text-sm">
+                                    规则生成 + CTGAN 模型生成门架交易数据
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- DGM大模型生成 -->
+                <a href="/dgm-generation" class="block group">
+                    <div class="bg-gradient-to-r from-emerald-900/40 to-teal-900/40 border-2 border-emerald-700 rounded-xl p-6 hover:from-emerald-900/60 hover:to-teal-900/60 hover:border-emerald-500 transition-all hover:shadow-2xl hover:scale-[1.02]">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                                <i class="fas fa-brain text-white text-2xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-white text-xl mb-1 flex items-center gap-2">
+                                    🤖 DGM大模型生成
+                                    <span class="text-xs bg-emerald-500 text-white px-2 py-1 rounded-full">生产级</span>
+                                    <i class="fas fa-arrow-right text-emerald-400 text-sm group-hover:translate-x-2 transition-transform"></i>
+                                </h3>
+                                <p class="text-gray-400 text-sm">
+                                    LLM智能生成 · 判别式验证 · 质量评分90%
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </section>
+        
+        <!-- 统一查询模块 -->
+        <div id="content-unified">
         <!-- Tags Section -->
         <section class="mb-12">
             <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl p-8 md:p-12 border border-slate-700">
@@ -384,6 +436,163 @@
                 </div>
             </div>
         </section>
+        </div>
+        
+        <!-- 工作流编排模块 -->
+        <div id="content-workflow" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- 智能Agent入口 -->
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl p-6 border border-slate-700">
+                    <div class="flex items-center mb-4">
+                        <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-3 rounded-lg mr-3">
+                            <i class="fas fa-robot text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-white">智能Agent入口</h2>
+                            <p class="text-sm text-gray-400">自然语言查询，自动编排执行</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">💬 输入您的需求</label>
+                            <textarea 
+                                id="agentQuery" 
+                                rows="3" 
+                                class="w-full px-4 py-3 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                placeholder="例如：帮我核算通行费&#10;检测异常交易&#10;分析全网流量情况"></textarea>
+                        </div>
+
+                        <div class="bg-blue-900/30 border border-blue-700 rounded-lg p-3">
+                            <p class="text-sm text-blue-300 font-medium mb-1">💡 示例查询：</p>
+                            <div class="space-y-1">
+                                <button onclick="setQuery('帮我核算2023年1月3号的通行费')" 
+                                        class="text-xs text-blue-400 hover:text-blue-300 hover:underline block">
+                                    • 帮我核算2023年1月3号的通行费
+                                </button>
+                                <button onclick="setQuery('检测最近的异常交易')" 
+                                        class="text-xs text-blue-400 hover:text-blue-300 hover:underline block">
+                                    • 检测最近的异常交易
+                                </button>
+                                <button onclick="setQuery('分析全网的流量情况')" 
+                                        class="text-xs text-blue-400 hover:text-blue-300 hover:underline block">
+                                    • 分析全网的流量情况
+                                </button>
+                            </div>
+                        </div>
+
+                        <button 
+                            onclick="executeAgent()" 
+                            class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-500 hover:to-purple-500 transition duration-200 flex items-center justify-center">
+                            <i class="fas fa-bolt mr-2"></i>智能执行
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 工作流直接调用 -->
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl p-6 border border-slate-700">
+                    <div class="flex items-center mb-4">
+                        <div class="bg-gradient-to-r from-green-500 to-teal-500 text-white p-3 rounded-lg mr-3">
+                            <i class="fas fa-tasks text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-white">工作流直接调用</h2>
+                            <p class="text-sm text-gray-400">选择场景，配置参数执行</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">🎯 选择场景</label>
+                            <select id="scenarioSelect" onchange="updateScenarioInfo()" 
+                                    class="w-full px-4 py-3 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500">
+                                <option value="">-- 请选择工作流场景 --</option>
+                                <option value="scenario1">场景1: 跨路段通行费核算</option>
+                                <option value="scenario2">场景2: 异常交易稽核</option>
+                                <option value="scenario3">场景3: 全网流量分析</option>
+                            </select>
+                        </div>
+
+                        <div id="scenarioInfo" class="bg-slate-700/50 border border-slate-600 rounded-lg p-3 hidden">
+                            <p class="text-sm font-medium text-gray-300 mb-2">场景说明：</p>
+                            <p id="scenarioDescription" class="text-sm text-gray-400"></p>
+                        </div>
+
+                        <div id="paramsSection" class="space-y-3 hidden">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">开始日期</label>
+                                <input type="date" id="startDate" value="2023-01-03"
+                                       class="w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div id="endDateDiv" class="hidden">
+                                <label class="block text-sm font-medium text-gray-300 mb-1">结束日期</label>
+                                <input type="date" id="endDate" value="2023-01-10"
+                                       class="w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div id="limitDiv" class="hidden">
+                                <label class="block text-sm font-medium text-gray-300 mb-1">查询数量</label>
+                                <input type="number" id="limit" value="20" min="1" max="100"
+                                       class="w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500">
+                            </div>
+                        </div>
+
+                        <button 
+                            onclick="executeWorkflow()" 
+                            class="w-full bg-gradient-to-r from-green-600 to-teal-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-green-500 hover:to-teal-500 transition duration-200 flex items-center justify-center">
+                            <i class="fas fa-play mr-2"></i>执行工作流
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 执行状态 -->
+            <div id="workflowLoading" class="hidden bg-slate-800 rounded-2xl shadow-2xl p-6 mb-6 border border-slate-700">
+                <div class="flex items-center justify-center space-x-3">
+                    <div class="spinner w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                    <span class="text-lg text-white">正在执行中...</span>
+                </div>
+            </div>
+
+            <!-- 结果展示区域 -->
+            <div id="workflowResult" class="hidden">
+                <div class="bg-slate-800 rounded-2xl shadow-2xl p-6 mb-6 border border-slate-700">
+                    <h3 class="text-xl font-bold text-white mb-4 flex items-center">
+                        <span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm mr-2">✓ 执行成功</span>
+                        <span id="resultScenarioName"></span>
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div id="statsCards"></div>
+                    </div>
+
+                    <!-- 执行日志 -->
+                    <div class="mt-6">
+                        <h4 class="text-lg font-semibold text-white mb-3">📋 执行日志</h4>
+                        <div class="bg-slate-700 rounded-lg p-4 max-h-40 overflow-y-auto">
+                            <div id="executionLogs" class="space-y-2 font-mono text-sm text-gray-300"></div>
+                        </div>
+                    </div>
+
+                    <!-- 详细结果 -->
+                    <div class="mt-6">
+                        <h4 class="text-lg font-semibold text-white mb-3">📊 详细结果</h4>
+                        <div class="bg-slate-700 rounded-lg p-4">
+                            <pre id="detailedResult" class="text-sm text-gray-300 whitespace-pre-wrap"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 错误提示 -->
+            <div id="workflowError" class="hidden">
+                <div class="bg-red-900/20 border border-red-700 rounded-2xl p-6">
+                    <h3 class="text-xl font-bold text-red-400 mb-2 flex items-center">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>执行失败
+                    </h3>
+                    <p id="errorMessage" class="text-red-300"></p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Back to Top Button -->
@@ -500,17 +709,22 @@
                 
                 loading.classList.add('hidden');
                 
-                if (data.understood) {
-                    displayResults(data);
+                if (data.success) {
+                    // 统一Agent返回成功，根据execution_type显示不同类型的结果
+                    displayUnifiedResults(data);
                     results.classList.remove('hidden');
                     
-                    // Smooth scroll to results with offset
+                    // Smooth scroll to results
                     setTimeout(() => {
                         results.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }, 100);
+                } else if (data.understood) {
+                    // 兼容旧版Agent格式
+                    displayResults(data);
+                    results.classList.remove('hidden');
                 } else {
-                    // 显示友好的错误提示
-                    showErrorMessage(data.message || 'AI暂时无法理解您的需求', data.available_tags);
+                    // 显示错误提示
+                    showErrorMessage(data.error || data.message || 'AI暂时无法理解您的需求', data.available_tags);
                 }
             } catch (error) {
                 loading.classList.add('hidden');
@@ -586,6 +800,289 @@
             }
         }
 
+        function displayUnifiedResults(data) {
+            const resultsContainer = document.getElementById('results');
+            
+            if (data.execution_type === 'api') {
+                // API推荐结果
+                displayAPIRecommendations(data);
+            } else if (data.execution_type === 'workflow') {
+                // 工作流执行结果
+                displayWorkflowResultUnified(data);
+            } else {
+                // 未知类型
+                showErrorMessage('返回了未知的结果类型', null);
+            }
+        }
+        
+        function displayWorkflowResultUnified(data) {
+            const resultsContainer = document.getElementById('results');
+            const result = data.result || {};
+            
+            // 构建场景信息卡片
+            let html = `
+                <div class="result-card bg-gradient-to-br from-green-900/30 via-emerald-900/30 to-teal-900/30 border-2 border-green-700 rounded-2xl p-6 shadow-lg mb-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-project-diagram text-white"></i>
+                        </div>
+                        <h4 class="text-xl font-bold text-white">工作流执行结果</h4>
+                    </div>
+                    <div class="space-y-3">
+                        <p class="text-gray-300"><strong>查询需求：</strong>${data.query}</p>
+                        <p class="text-gray-300"><strong>执行场景：</strong>${data.scenario_name || '未知场景'}</p>
+                        ${data.scenario_description ? `<p class="text-gray-400 text-sm">${data.scenario_description}</p>` : ''}
+                        <div class="flex items-center gap-2">
+                            <span class="px-3 py-1 bg-green-900/60 text-green-300 rounded-full text-sm font-bold border border-green-700">
+                                <i class="fas fa-check mr-1"></i>执行成功
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 构建统计数据卡片
+            const stats = [];
+            
+            // 场景1：通行费核算
+            if (result.entrance_count !== undefined) {
+                stats.push({ label: '入口交易', value: result.entrance_count, color: 'blue', icon: 'sign-in-alt' });
+                stats.push({ label: '出口交易', value: result.exit_count, color: 'green', icon: 'sign-out-alt' });
+                if (result.gantry_count !== undefined) {
+                    stats.push({ label: '门架交易', value: result.gantry_count, color: 'cyan', icon: 'archway' });
+                }
+                stats.push({ label: '总交易数', value: result.total_transactions || (result.entrance_count + result.exit_count), color: 'indigo', icon: 'list-ol' });
+                stats.push({ label: '总应收', value: result.total_toll_money + '元', color: 'yellow', icon: 'coins' });
+                stats.push({ label: '实收金额', value: result.total_real_money + '元', color: 'purple', icon: 'money-bill-wave' });
+                if (result.exit_toll_money !== undefined && result.gantry_toll_money !== undefined) {
+                    stats.push({ label: '出口费用', value: result.exit_toll_money + '元', color: 'green', icon: 'dollar-sign' });
+                    stats.push({ label: '门架费用', value: result.gantry_toll_money + '元', color: 'cyan', icon: 'dollar-sign' });
+                }
+            } 
+            // 场景2：异常交易稽核
+            else if (result.anomaly_count !== undefined) {
+                stats.push({ label: '检查交易', value: result.total_checked, color: 'blue', icon: 'search' });
+                stats.push({ label: '异常交易', value: result.anomaly_count, color: 'red', icon: 'exclamation-triangle' });
+                stats.push({ label: '异常率', value: result.anomaly_rate + '%', color: 'orange', icon: 'percent' });
+                if (result.statistics?.avg_fee) {
+                    stats.push({ label: '平均费用', value: result.statistics.avg_fee + '元', color: 'green', icon: 'chart-line' });
+                }
+            } 
+            // 场景3：全网流量分析
+            else if (result.total_flow !== undefined) {
+                stats.push({ label: '统计路段', value: result.total_sections, color: 'blue', icon: 'road' });
+                stats.push({ label: '总流量', value: result.total_flow + '次', color: 'green', icon: 'car' });
+                if (result.busiest_section) {
+                    stats.push({ label: '最繁忙路段', value: result.busiest_section.section_name, color: 'purple', icon: 'chart-bar' });
+                    stats.push({ label: '最高流量', value: result.busiest_section.flow + '次', color: 'red', icon: 'arrow-up' });
+                }
+            }
+            
+            if (stats.length > 0) {
+                html += `
+                    <div class="result-card bg-slate-800 border-2 border-slate-700 rounded-2xl p-6 shadow-lg mb-6">
+                        <h5 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-chart-pie text-blue-400"></i>
+                            统计数据
+                        </h5>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                `;
+                
+                stats.forEach(stat => {
+                    html += `
+                        <div class="bg-${stat.color}-900/40 border border-${stat.color}-700 rounded-lg p-4 hover:bg-${stat.color}-900/60 transition-all">
+                            <p class="text-sm text-${stat.color}-400 font-medium flex items-center gap-2">
+                                <i class="fas fa-${stat.icon}"></i>
+                                ${stat.label}
+                            </p>
+                            <p class="text-2xl font-bold text-${stat.color}-300 mt-2">${stat.value}</p>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 显示异常记录（场景2）
+            if (result.anomalies && result.anomalies.length > 0) {
+                html += `
+                    <div class="result-card bg-slate-800 border-2 border-slate-700 rounded-2xl p-6 shadow-lg mb-6">
+                        <h5 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                            异常记录 (前${Math.min(result.anomalies.length, 10)}条)
+                        </h5>
+                        <div class="space-y-3">
+                `;
+                
+                result.anomalies.slice(0, 10).forEach((anomaly, index) => {
+                    html += `
+                        <div class="bg-red-900/20 border border-red-700 rounded-lg p-4">
+                            <div class="flex items-start justify-between mb-2">
+                                <span class="text-red-300 font-bold">#${index + 1}</span>
+                                <span class="px-2 py-1 bg-red-900/60 text-red-300 rounded text-xs font-semibold">
+                                    ${anomaly.anomaly_reason || '异常'}
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 text-sm text-gray-300">
+                                <div><strong>交易ID:</strong> ${anomaly.exit_transaction_id || 'N/A'}</div>
+                                <div><strong>费用:</strong> ${anomaly.toll_money || 'N/A'}元</div>
+                                <div><strong>车牌:</strong> ${anomaly.plate_no || 'N/A'}</div>
+                                <div><strong>时间:</strong> ${anomaly.exit_time ? new Date(anomaly.exit_time).toLocaleString('zh-CN') : 'N/A'}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 显示路段流量排行（场景3）
+            if (result.section_flows && result.section_flows.length > 0) {
+                html += `
+                    <div class="result-card bg-slate-800 border-2 border-slate-700 rounded-2xl p-6 shadow-lg mb-6">
+                        <h5 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-trophy text-yellow-400"></i>
+                            路段流量排行
+                        </h5>
+                        <div class="space-y-3">
+                `;
+                
+                result.section_flows.forEach((section, index) => {
+                    const rankColors = ['yellow', 'gray', 'orange', 'blue', 'blue'];
+                    const color = rankColors[Math.min(index, 4)];
+                    html += `
+                        <div class="bg-${color}-900/20 border border-${color}-700 rounded-lg p-4 flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <span class="text-${color}-300 font-bold text-2xl w-8">#${index + 1}</span>
+                                <div>
+                                    <p class="text-white font-semibold">${section.section_name || section.section_id}</p>
+                                    <p class="text-gray-400 text-sm">${section.section_id}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-${color}-300 font-bold text-xl">${section.flow}</p>
+                                <p class="text-gray-400 text-sm">次通行</p>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 显示执行日志
+            if (data.execution_logs && data.execution_logs.length > 0) {
+                html += `
+                    <div class="result-card bg-slate-800 border-2 border-slate-700 rounded-2xl p-6 shadow-lg">
+                        <h5 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-terminal text-green-400"></i>
+                            执行日志
+                        </h5>
+                        <div class="bg-slate-900/50 rounded-lg p-4 font-mono text-sm space-y-1 max-h-96 overflow-y-auto">
+                `;
+                
+                data.execution_logs.forEach(log => {
+                    html += `<div class="text-gray-300">${log}</div>`;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultsContainer.innerHTML = html;
+        }
+        
+        function displayAPIRecommendations(data) {
+            const resultsContainer = document.getElementById('results');
+            
+            let html = `
+                <div class="result-card bg-gradient-to-br from-purple-900/30 via-blue-900/30 to-indigo-900/30 border-2 border-purple-700 rounded-2xl p-6 shadow-lg mb-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-brain text-white"></i>
+                        </div>
+                        <h4 class="text-xl font-bold text-white">AI分析结果</h4>
+                    </div>
+                    <div class="space-y-3">
+                        <p class="text-gray-300"><strong>查询需求：</strong>${data.query}</p>
+                        ${data.reason ? `<p class="text-gray-400 text-sm">${data.reason}</p>` : ''}
+                        <div class="flex items-center gap-2">
+                            <span class="px-3 py-1 bg-green-900/60 text-green-300 rounded-full text-sm font-bold border border-green-700">
+                                <i class="fas fa-check mr-1"></i>推荐 ${data.count} 个API
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // API推荐列表
+            if (data.recommendations && data.recommendations.length > 0) {
+                data.recommendations.forEach((api, index) => {
+                    html += `
+                        <div class="result-card bg-gradient-to-br from-slate-700 to-slate-800 border-2 border-slate-600 rounded-2xl p-6 hover:border-orange-600 hover:shadow-2xl transition-all duration-300 mb-4">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex-1">
+                                    <h5 class="text-2xl font-bold text-white mb-2">
+                                        ${index + 1}. ${api.name}
+                                    </h5>
+                                    <p class="text-gray-400 mb-4">${api.description}</p>
+                                </div>
+                                <span class="px-3 py-1 bg-blue-900/60 text-blue-300 rounded-lg text-sm font-bold border border-blue-700">
+                                    ${api.method || 'GET'}
+                                </span>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h6 class="text-sm font-bold text-gray-400 mb-2">API端点</h6>
+                                <div class="bg-slate-900/50 rounded-lg p-3 font-mono text-sm text-green-400">
+                                    ${api.endpoint}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h6 class="text-sm font-bold text-gray-400 mb-2">完整URL（可直接调用）</h6>
+                                <div class="bg-slate-900/50 rounded-lg p-3 font-mono text-xs text-blue-400 break-all">
+                                    ${api.full_url}
+                                </div>
+                                <button onclick="copyToClipboard('${api.full_url.replace(/'/g, "\\'")}', this)" 
+                                        class="mt-2 px-4 py-2 bg-blue-900/60 hover:bg-blue-800 text-blue-300 rounded-lg text-sm font-semibold border border-blue-700 transition-all">
+                                    <i class="fas fa-copy mr-2"></i>复制URL
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            resultsContainer.innerHTML = html;
+        }
+        
+        function copyToClipboard(text, button) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check mr-2"></i>已复制';
+                button.classList.add('bg-green-900/60', 'text-green-300', 'border-green-700');
+                button.classList.remove('bg-blue-900/60', 'text-blue-300', 'border-blue-700');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('bg-green-900/60', 'text-green-300', 'border-green-700');
+                    button.classList.add('bg-blue-900/60', 'text-blue-300', 'border-blue-700');
+                }, 2000);
+            });
+        }
+        
         function displayResults(data) {
             // Display explanation - 添加安全检查
             const explanationEl = document.getElementById('explanation');
@@ -818,6 +1315,225 @@
             window.addEventListener('load', function() {
                 queryInput.focus();
             });
+        }
+        
+        // ========== 工作流相关函数 ==========
+        
+        // 标签页切换
+        function switchTab(tab) {
+            const apiBtn = document.getElementById('tab-api');
+            const workflowBtn = document.getElementById('tab-workflow');
+            const apiContent = document.getElementById('content-api');
+            const workflowContent = document.getElementById('content-workflow');
+            
+            if (tab === 'api') {
+                apiBtn.className = 'flex-1 py-4 px-6 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold text-lg shadow-lg transition-all';
+                workflowBtn.className = 'flex-1 py-4 px-6 bg-slate-700 text-gray-300 rounded-xl font-bold text-lg transition-all hover:bg-slate-600';
+                apiContent.classList.remove('hidden');
+                workflowContent.classList.add('hidden');
+            } else {
+                workflowBtn.className = 'flex-1 py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-lg shadow-lg transition-all';
+                apiBtn.className = 'flex-1 py-4 px-6 bg-slate-700 text-gray-300 rounded-xl font-bold text-lg transition-all hover:bg-slate-600';
+                workflowContent.classList.remove('hidden');
+                apiContent.classList.add('hidden');
+            }
+        }
+        
+        // 场景信息
+        const scenarios = {
+            'scenario1': {
+                name: '跨路段通行费核算',
+                description: '查询入口和出口交易记录，计算通行费用并进行核算。涉及：入口收费站、出口收费站、结算中心',
+                params: ['start_date', 'end_date']  // 支持日期范围查询
+            },
+            'scenario2': {
+                name: '异常交易稽核',
+                description: '获取真实交易数据，结合货车统计信息，检测异常交易。涉及：监管部门、收费站、统计中心',
+                params: ['start_date', 'end_date', 'limit']
+            },
+            'scenario3': {
+                name: '全网流量分析',
+                description: '获取所有路段信息，统计各路段流量，进行聚合分析。涉及：路网运营中心、各路段管理处',
+                params: ['start_date', 'end_date']
+            }
+        };
+        
+        function setQuery(query) {
+            const textarea = document.getElementById('agentQuery');
+            if (textarea) textarea.value = query;
+        }
+        
+        function updateScenarioInfo() {
+            const select = document.getElementById('scenarioSelect');
+            const scenario = select.value;
+            const infoDiv = document.getElementById('scenarioInfo');
+            const paramsDiv = document.getElementById('paramsSection');
+            const descDiv = document.getElementById('scenarioDescription');
+
+            if (scenario && scenarios[scenario]) {
+                infoDiv.classList.remove('hidden');
+                paramsDiv.classList.remove('hidden');
+                descDiv.textContent = scenarios[scenario].description;
+
+                document.getElementById('endDateDiv').classList.add('hidden');
+                document.getElementById('limitDiv').classList.add('hidden');
+
+                if (scenarios[scenario].params.includes('end_date')) {
+                    document.getElementById('endDateDiv').classList.remove('hidden');
+                }
+                if (scenarios[scenario].params.includes('limit')) {
+                    document.getElementById('limitDiv').classList.remove('hidden');
+                }
+            } else {
+                infoDiv.classList.add('hidden');
+                paramsDiv.classList.add('hidden');
+            }
+        }
+        
+        async function executeAgent() {
+            const query = document.getElementById('agentQuery').value.trim();
+            if (!query) {
+                alert('请输入查询内容');
+                return;
+            }
+
+            hideWorkflowResults();
+            showWorkflowLoading();
+
+            try {
+                const response = await fetch('/api/agent/smart-query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const result = await response.json();
+                hideWorkflowLoading();
+
+                if (result.success) {
+                    displayWorkflowResult(result);
+                } else {
+                    displayWorkflowError(result.error || '执行失败');
+                }
+            } catch (error) {
+                hideWorkflowLoading();
+                displayWorkflowError('网络请求失败: ' + error.message);
+            }
+        }
+
+        async function executeWorkflow() {
+            const scenario = document.getElementById('scenarioSelect').value;
+            if (!scenario) {
+                alert('请选择工作流场景');
+                return;
+            }
+
+            const params = {
+                start_date: document.getElementById('startDate').value
+            };
+
+            if (scenarios[scenario].params.includes('end_date')) {
+                params.end_date = document.getElementById('endDate').value;
+            }
+            if (scenarios[scenario].params.includes('limit')) {
+                params.limit = parseInt(document.getElementById('limit').value);
+            }
+
+            hideWorkflowResults();
+            showWorkflowLoading();
+
+            try {
+                const response = await fetch('/api/workflow/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scenario, params })
+                });
+
+                const result = await response.json();
+                hideWorkflowLoading();
+
+                if (result.success) {
+                    displayWorkflowResult(result);
+                } else {
+                    displayWorkflowError(result.error || '执行失败');
+                }
+            } catch (error) {
+                hideWorkflowLoading();
+                displayWorkflowError('网络请求失败: ' + error.message);
+            }
+        }
+
+        function displayWorkflowResult(result) {
+            document.getElementById('workflowResult').classList.remove('hidden');
+            document.getElementById('resultScenarioName').textContent = 
+                result.scenario_name || scenarios[result.scenario]?.name || '工作流';
+
+            const statsCards = document.getElementById('statsCards');
+            statsCards.innerHTML = '';
+            const data = result.result || {};
+
+            const stats = [];
+            if (data.entrance_count !== undefined) {
+                stats.push({ label: '入口交易', value: data.entrance_count, color: 'blue' });
+                stats.push({ label: '出口交易', value: data.exit_count, color: 'green' });
+                if (data.gantry_count !== undefined) {
+                    stats.push({ label: '门架交易', value: data.gantry_count, color: 'cyan' });
+                }
+                stats.push({ label: '总交易数', value: data.total_transactions || (data.entrance_count + data.exit_count), color: 'indigo' });
+                stats.push({ label: '总应收', value: data.total_toll_money + '元', color: 'yellow' });
+                stats.push({ label: '实收金额', value: data.total_real_money + '元', color: 'purple' });
+                if (data.exit_toll_money !== undefined && data.gantry_toll_money !== undefined) {
+                    stats.push({ label: '出口费用', value: data.exit_toll_money + '元', color: 'green' });
+                    stats.push({ label: '门架费用', value: data.gantry_toll_money + '元', color: 'cyan' });
+                }
+            } else if (data.anomaly_count !== undefined) {
+                stats.push({ label: '检查交易', value: data.total_checked, color: 'blue' });
+                stats.push({ label: '异常交易', value: data.anomaly_count, color: 'red' });
+                stats.push({ label: '异常率', value: data.anomaly_rate + '%', color: 'orange' });
+                stats.push({ label: '平均费用', value: (data.statistics?.avg_fee || 0) + '元', color: 'green' });
+            } else if (data.total_flow !== undefined) {
+                stats.push({ label: '统计路段', value: data.total_sections, color: 'blue' });
+                stats.push({ label: '总流量', value: data.total_flow + '次', color: 'green' });
+                if (data.busiest_section) {
+                    stats.push({ label: '最繁忙路段', value: data.busiest_section.section_name, color: 'purple' });
+                }
+            }
+
+            stats.forEach(stat => {
+                statsCards.innerHTML += `
+                    <div class="bg-${stat.color}-900/40 border border-${stat.color}-700 rounded-lg p-4">
+                        <p class="text-sm text-${stat.color}-400 font-medium">${stat.label}</p>
+                        <p class="text-2xl font-bold text-${stat.color}-300 mt-1">${stat.value}</p>
+                    </div>
+                `;
+            });
+
+            const logsDiv = document.getElementById('executionLogs');
+            logsDiv.innerHTML = '';
+            (result.execution_logs || result.logs || []).forEach(log => {
+                logsDiv.innerHTML += `<div class="text-gray-300">→ ${log}</div>`;
+            });
+
+            document.getElementById('detailedResult').textContent = 
+                JSON.stringify(result.result, null, 2);
+        }
+
+        function displayWorkflowError(message) {
+            document.getElementById('workflowError').classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function showWorkflowLoading() {
+            document.getElementById('workflowLoading').classList.remove('hidden');
+        }
+
+        function hideWorkflowLoading() {
+            document.getElementById('workflowLoading').classList.add('hidden');
+        }
+
+        function hideWorkflowResults() {
+            document.getElementById('workflowResult').classList.add('hidden');
+            document.getElementById('workflowError').classList.add('hidden');
         }
     </script>
 </body>

@@ -16,6 +16,10 @@ from sqlalchemy import func, text, case, desc
 from sqlalchemy.sql import extract
 import random, math
 
+# 导入LangGraph工作流
+from langgraph_workflows import workflow_executor
+from enhanced_agent import enhanced_agent
+
 # 导入模型和schemas
 from models import db, Section, TollStation, Gantry, EntranceTransaction, ExitTransaction, GantryTransaction
 from schemas import ma, section_schema, sections_schema, toll_station_schema, toll_stations_schema
@@ -136,17 +140,39 @@ def require_api_key(f):
 
 @app.route('/')
 def index():
-    """首页"""
-    return render_template('index.html')
+    """首页 - 货车智能Agent"""
+    return render_template('truck_agent.html')
 
 @app.route('/truck-agent')
 def truck_agent():
-    """货车数据分析Agent页面"""
+    """货车数据分析Agent页面（兼容旧路由）"""
     return render_template('truck_agent.html')
+
+@app.route('/old-index')
+def old_index():
+    """旧版SQL查询页面（保留）"""
+    return render_template('index.html')
+
+@app.route('/workflow-agent')
+def workflow_agent():
+    """工作流和智能Agent页面"""
+    return render_template('workflow_agent.html')
 
 @app.route('/api/agent/query', methods=['POST'])
 def agent_query():
-    """Agent查询接口 - 根据用户描述推荐API"""
+    """统一Agent查询接口 - 自动决策API推荐或工作流编排
+    
+    POST /api/agent/query
+    Body: {
+        "query": "用户的自然语言查询"
+    }
+    
+    示例：
+    - "分析货车流量" -> 推荐流量相关API
+    - "查看拥堵情况" -> 推荐拥堵指数API
+    - "核算通行费" -> 执行场景1工作流
+    - "检测异常交易" -> 执行场景2工作流
+    """
     try:
         data = request.get_json()
         user_query = data.get('query', '')
@@ -154,11 +180,36 @@ def agent_query():
         if not user_query:
             return jsonify({'error': '请提供查询描述'}), 400
         
-        response = agent.process_query(user_query, request.host_url)
+        # 使用统一Agent处理（支持API推荐和工作流）
+        response = enhanced_agent.process_query(user_query, request.host_url)
         
         return jsonify(response)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/agent/smart-query', methods=['POST'])
+def smart_agent_query():
+    """统一Agent查询接口（别名，兼容旧代码）"""
+    try:
+        data = request.get_json()
+        user_query = data.get('query', '')
+        
+        if not user_query:
+            return jsonify({
+                'success': False,
+                'error': '请提供查询描述'
+            }), 400
+        
+        # 使用统一Agent处理
+        response = enhanced_agent.process_query(user_query, request.host_url)
+        
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'智能Agent处理失败: {str(e)}'
+        }), 500
 
 @app.route('/api/ai/sql', methods=['POST'])
 def ai_sql_query():
@@ -203,6 +254,28 @@ def ai_sql_generate():
     except Exception as e:
         return jsonify({
             'success': False,
+            'error': str(e)
+        }), 500
+
+# ==================== 系统状态API ====================
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """健康检查接口"""
+    try:
+        # 测试数据库连接
+        sections_count = db.session.query(Section).count()
+        
+        return jsonify({
+            'success': True,
+            'status': 'healthy',
+            'database': 'connected',
+            'sections_count': sections_count
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'status': 'unhealthy',
             'error': str(e)
         }), 500
 
@@ -1348,6 +1421,81 @@ def dgm_status():
             'status': 'error',
             'message': str(e)
         }), 500
+
+
+# ==================== LangGraph服务编排 API ====================
+
+@app.route('/api/workflow/execute', methods=['POST'])
+def workflow_execute():
+    """执行LangGraph工作流
+    
+    POST /api/workflow/execute
+    Body: {
+        "scenario": "scenario1|scenario2|scenario3",
+        "params": {...}
+    }
+    """
+    try:
+        data = request.get_json()
+        scenario = data.get('scenario', '')
+        params = data.get('params', {})
+        
+        if not scenario:
+            return jsonify({
+                'success': False,
+                'error': '请提供场景名称 (scenario1/scenario2/scenario3)'
+            }), 400
+        
+        # 执行工作流
+        result = workflow_executor.execute(scenario, params)
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'工作流执行失败: {str(e)}'
+        }), 500
+
+
+@app.route('/api/workflow/scenarios', methods=['GET'])
+def workflow_scenarios():
+    """获取所有可用场景信息
+    
+    GET /api/workflow/scenarios
+    GET /api/workflow/scenarios?scenario=scenario1
+    """
+    try:
+        scenario = request.args.get('scenario', '')
+        
+        if scenario:
+            # 获取单个场景信息
+            info = workflow_executor.get_scenario_info(scenario)
+            if not info:
+                return jsonify({
+                    'success': False,
+                    'error': f'场景不存在: {scenario}'
+                }), 404
+            return jsonify({
+                'success': True,
+                'scenario': scenario,
+                'info': info
+            })
+        else:
+            # 获取所有场景信息
+            scenarios = {}
+            for s in ['scenario1', 'scenario2', 'scenario3']:
+                scenarios[s] = workflow_executor.get_scenario_info(s)
+            
+            return jsonify({
+                'success': True,
+                'scenarios': scenarios
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 
 if __name__ == '__main__':
     app.run(

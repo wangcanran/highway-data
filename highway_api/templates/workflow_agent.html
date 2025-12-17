@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能工作流编排系统 - LangGraph & Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-white to-purple-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- 标题 -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">🤖 智能工作流编排系统</h1>
+            <p class="text-gray-600">基于 LangGraph + AI Agent 的服务融合平台</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- 左侧：智能Agent -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center mb-4">
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-3 rounded-lg mr-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">智能Agent入口</h2>
+                        <p class="text-sm text-gray-500">自然语言查询，自动编排执行</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">💬 输入您的需求</label>
+                        <textarea 
+                            id="agentQuery" 
+                            rows="3" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            placeholder="例如：帮我核算通行费&#10;检测异常交易&#10;分析全网流量情况"></textarea>
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p class="text-sm text-blue-800 font-medium mb-1">💡 示例查询：</p>
+                        <div class="space-y-1">
+                            <button onclick="setQuery('帮我核算2023年1月3号的通行费')" 
+                                    class="text-xs text-blue-600 hover:text-blue-800 hover:underline block">
+                                • 帮我核算2023年1月3号的通行费
+                            </button>
+                            <button onclick="setQuery('检测最近的异常交易')" 
+                                    class="text-xs text-blue-600 hover:text-blue-800 hover:underline block">
+                                • 检测最近的异常交易
+                            </button>
+                            <button onclick="setQuery('分析全网的流量情况')" 
+                                    class="text-xs text-blue-600 hover:text-blue-800 hover:underline block">
+                                • 分析全网的流量情况
+                            </button>
+                        </div>
+                    </div>
+
+                    <button 
+                        onclick="executeAgent()" 
+                        class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-600 transition duration-200 flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        智能执行
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右侧：工作流直接调用 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center mb-4">
+                    <div class="bg-gradient-to-r from-green-500 to-teal-500 text-white p-3 rounded-lg mr-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">工作流直接调用</h2>
+                        <p class="text-sm text-gray-500">选择场景，配置参数执行</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">🎯 选择场景</label>
+                        <select id="scenarioSelect" onchange="updateScenarioInfo()" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                            <option value="">-- 请选择工作流场景 --</option>
+                            <option value="scenario1">场景1: 跨路段通行费核算</option>
+                            <option value="scenario2">场景2: 异常交易稽核</option>
+                            <option value="scenario3">场景3: 全网流量分析</option>
+                        </select>
+                    </div>
+
+                    <div id="scenarioInfo" class="bg-gray-50 border border-gray-200 rounded-lg p-3 hidden">
+                        <p class="text-sm font-medium text-gray-700 mb-2">场景说明：</p>
+                        <p id="scenarioDescription" class="text-sm text-gray-600"></p>
+                    </div>
+
+                    <div id="paramsSection" class="space-y-3 hidden">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
+                            <input type="date" id="startDate" value="2023-01-03"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                        </div>
+                        <div id="endDateDiv" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
+                            <input type="date" id="endDate" value="2023-01-10"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                        </div>
+                        <div id="limitDiv" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">查询数量</label>
+                            <input type="number" id="limit" value="20" min="1" max="100"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                        </div>
+                    </div>
+
+                    <button 
+                        onclick="executeWorkflow()" 
+                        class="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white py-3 px-6 rounded-lg font-semibold hover:from-green-600 hover:to-teal-600 transition duration-200 flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        执行工作流
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 执行状态 -->
+        <div id="loadingSection" class="hidden bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-center space-x-3">
+                <div class="spinner w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                <span class="text-lg text-gray-700">正在执行中...</span>
+            </div>
+        </div>
+
+        <!-- 结果展示区域 -->
+        <div id="resultSection" class="hidden fade-in">
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm mr-2">✓ 执行成功</span>
+                    <span id="resultScenarioName"></span>
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div id="statsCards"></div>
+                </div>
+
+                <!-- 执行日志 -->
+                <div class="mt-6">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-3">📋 执行日志</h4>
+                    <div class="bg-gray-50 rounded-lg p-4 max-h-40 overflow-y-auto">
+                        <div id="executionLogs" class="space-y-2 font-mono text-sm"></div>
+                    </div>
+                </div>
+
+                <!-- 详细结果 -->
+                <div class="mt-6">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-3">📊 详细结果</h4>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <pre id="detailedResult" class="text-sm text-gray-700 whitespace-pre-wrap"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 错误提示 -->
+        <div id="errorSection" class="hidden fade-in">
+            <div class="bg-red-50 border border-red-200 rounded-xl p-6">
+                <h3 class="text-xl font-bold text-red-800 mb-2 flex items-center">
+                    <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                    执行失败
+                </h3>
+                <p id="errorMessage" class="text-red-700"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 场景信息
+        const scenarios = {
+            'scenario1': {
+                name: '跨路段通行费核算',
+                description: '查询入口和出口交易记录，计算通行费用并进行核算。涉及：入口收费站、出口收费站、结算中心',
+                params: ['start_date']
+            },
+            'scenario2': {
+                name: '异常交易稽核',
+                description: '获取真实交易数据，结合货车统计信息，检测异常交易。涉及：监管部门、收费站、统计中心',
+                params: ['start_date', 'limit']
+            },
+            'scenario3': {
+                name: '全网流量分析',
+                description: '获取所有路段信息，统计各路段流量，进行聚合分析。涉及：路网运营中心、各路段管理处',
+                params: ['start_date', 'end_date']
+            }
+        };
+
+        function setQuery(query) {
+            document.getElementById('agentQuery').value = query;
+        }
+
+        function updateScenarioInfo() {
+            const select = document.getElementById('scenarioSelect');
+            const scenario = select.value;
+            const infoDiv = document.getElementById('scenarioInfo');
+            const paramsDiv = document.getElementById('paramsSection');
+            const descDiv = document.getElementById('scenarioDescription');
+
+            if (scenario && scenarios[scenario]) {
+                infoDiv.classList.remove('hidden');
+                paramsDiv.classList.remove('hidden');
+                descDiv.textContent = scenarios[scenario].description;
+
+                // 显示相关参数
+                document.getElementById('endDateDiv').classList.add('hidden');
+                document.getElementById('limitDiv').classList.add('hidden');
+
+                if (scenarios[scenario].params.includes('end_date')) {
+                    document.getElementById('endDateDiv').classList.remove('hidden');
+                }
+                if (scenarios[scenario].params.includes('limit')) {
+                    document.getElementById('limitDiv').classList.remove('hidden');
+                }
+            } else {
+                infoDiv.classList.add('hidden');
+                paramsDiv.classList.add('hidden');
+            }
+        }
+
+        async function executeAgent() {
+            const query = document.getElementById('agentQuery').value.trim();
+            if (!query) {
+                alert('请输入查询内容');
+                return;
+            }
+
+            hideResults();
+            showLoading();
+
+            try {
+                const response = await fetch('/api/agent/smart-query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const result = await response.json();
+                hideLoading();
+
+                if (result.success) {
+                    displayResult(result);
+                } else {
+                    displayError(result.error || '执行失败');
+                }
+            } catch (error) {
+                hideLoading();
+                displayError('网络请求失败: ' + error.message);
+            }
+        }
+
+        async function executeWorkflow() {
+            const scenario = document.getElementById('scenarioSelect').value;
+            if (!scenario) {
+                alert('请选择工作流场景');
+                return;
+            }
+
+            const params = {
+                start_date: document.getElementById('startDate').value
+            };
+
+            if (scenarios[scenario].params.includes('end_date')) {
+                params.end_date = document.getElementById('endDate').value;
+            }
+            if (scenarios[scenario].params.includes('limit')) {
+                params.limit = parseInt(document.getElementById('limit').value);
+            }
+
+            hideResults();
+            showLoading();
+
+            try {
+                const response = await fetch('/api/workflow/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scenario, params })
+                });
+
+                const result = await response.json();
+                hideLoading();
+
+                if (result.success) {
+                    displayResult(result);
+                } else {
+                    displayError(result.error || '执行失败');
+                }
+            } catch (error) {
+                hideLoading();
+                displayError('网络请求失败: ' + error.message);
+            }
+        }
+
+        function displayResult(result) {
+            document.getElementById('resultSection').classList.remove('hidden');
+            document.getElementById('resultScenarioName').textContent = 
+                result.scenario_name || scenarios[result.scenario]?.name || '工作流';
+
+            // 显示统计卡片
+            const statsCards = document.getElementById('statsCards');
+            statsCards.innerHTML = '';
+            const data = result.result || {};
+
+            // 根据场景显示不同的统计信息
+            const stats = [];
+            if (data.entrance_count !== undefined) {
+                stats.push({ label: '入口交易', value: data.entrance_count, color: 'blue' });
+                stats.push({ label: '出口交易', value: data.exit_count, color: 'green' });
+                stats.push({ label: '实收金额', value: data.total_real_money + '元', color: 'purple' });
+                stats.push({ label: '优惠金额', value: data.discount_amount + '元', color: 'red' });
+            } else if (data.anomaly_count !== undefined) {
+                stats.push({ label: '检查交易', value: data.total_checked, color: 'blue' });
+                stats.push({ label: '异常交易', value: data.anomaly_count, color: 'red' });
+                stats.push({ label: '异常率', value: data.anomaly_rate + '%', color: 'orange' });
+                stats.push({ label: '平均费用', value: data.statistics?.avg_fee + '元', color: 'green' });
+            } else if (data.total_flow !== undefined) {
+                stats.push({ label: '统计路段', value: data.total_sections, color: 'blue' });
+                stats.push({ label: '总流量', value: data.total_flow + '次', color: 'green' });
+                if (data.busiest_section) {
+                    stats.push({ label: '最繁忙路段', value: data.busiest_section.section_name, color: 'purple' });
+                }
+            }
+
+            stats.forEach(stat => {
+                statsCards.innerHTML += `
+                    <div class="bg-${stat.color}-50 border border-${stat.color}-200 rounded-lg p-4">
+                        <p class="text-sm text-${stat.color}-600 font-medium">${stat.label}</p>
+                        <p class="text-2xl font-bold text-${stat.color}-800 mt-1">${stat.value}</p>
+                    </div>
+                `;
+            });
+
+            // 显示执行日志
+            const logsDiv = document.getElementById('executionLogs');
+            logsDiv.innerHTML = '';
+            (result.execution_logs || result.logs || []).forEach(log => {
+                logsDiv.innerHTML += `<div class="text-gray-700">→ ${log}</div>`;
+            });
+
+            // 显示详细结果
+            document.getElementById('detailedResult').textContent = 
+                JSON.stringify(result.result, null, 2);
+        }
+
+        function displayError(message) {
+            document.getElementById('errorSection').classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function showLoading() {
+            document.getElementById('loadingSection').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSection').classList.add('hidden');
+        }
+
+        function hideResults() {
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('errorSection').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

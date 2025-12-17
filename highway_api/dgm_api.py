@@ -60,19 +60,18 @@ class DGMGeneratorAPI:
             if use_database:
                 logger.info(f"Loading {real_data_limit} samples from database for training...")
                 self.generator.load_real_samples(
+                    source='database',
                     limit=real_data_limit,
-                    evaluation_limit=evaluation_limit,
-                    use_database=True
+                    evaluation_limit=evaluation_limit
                 )
             else:
                 if not json_file or not os.path.exists(json_file):
                     raise ValueError(f"JSON file not found: {json_file}")
                 logger.info(f"Loading data from JSON file: {json_file}")
                 self.generator.load_real_samples(
+                    source=json_file,
                     limit=real_data_limit,
-                    evaluation_limit=evaluation_limit,
-                    use_database=False,
-                    json_file=json_file
+                    evaluation_limit=evaluation_limit
                 )
             
             # 训练判别式模型
