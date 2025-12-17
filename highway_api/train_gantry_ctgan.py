@@ -93,12 +93,50 @@ def load_real_gantry_data(limit: Optional[int] = None) -> pd.DataFrame:
     for col in ["transaction_time", "entrance_time"]:
         if col in df.columns:
             df[col] = df[col].astype(str)
+    
+    # 数值字段明确转换为数值类型（关键修复！）
+    numerical_fields = [
+        "pay_fee", "discount_fee", "fee", "fee_mileage",
+        "total_weight", "obu_fee_sum_before", "obu_fee_sum_after",
+        "pay_fee_prov_sum_local"
+    ]
+    
+    for col in numerical_fields:
+        if col in df.columns:
+            # 转换为数值类型，无法转换的设为NaN
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            # 填充NaN为0
+            df[col] = df[col].fillna(0)
+    
+    # 整数字段转换为int
+    integer_fields = ["axle_count", "vehicle_type", "media_type", "gantry_type",
+                      "transaction_type", "pass_state", "entrance_lane_type", "cpu_card_type"]
+    
+    for col in integer_fields:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            df[col] = df[col].fillna(0).astype(int)
+    
+    print(f"Data types after conversion:")
+    print(df.dtypes)
+    print(f"\nSample data (first row):")
+    print(df.iloc[0])
 
     return df
 
 
 def train_ctgan(df: pd.DataFrame) -> CTGAN:
     """基于输入 DataFrame 训练一个 CTGAN 模型。"""
+    
+    # 打印数据统计，确保数据正常
+    print("\n数据统计检查:")
+    print(f"DataFrame shape: {df.shape}")
+    print(f"\n数值字段统计:")
+    numerical_cols = ["pay_fee", "fee_mileage", "total_weight"]
+    for col in numerical_cols:
+        if col in df.columns:
+            print(f"  {col}: mean={df[col].mean():.2f}, std={df[col].std():.2f}, "
+                  f"min={df[col].min():.2f}, max={df[col].max():.2f}")
 
     model = CTGAN(
         epochs=50,      # 可按需要调整训练轮数
@@ -106,7 +144,15 @@ def train_ctgan(df: pd.DataFrame) -> CTGAN:
         verbose=True,
     )
 
+    print("\n开始训练CTGAN...")
     model.fit(df)
+    
+    # 训练后测试生成
+    print("\n训练完成，测试生成...")
+    test_samples = model.sample(5)
+    print("\n生成的测试样本:")
+    print(test_samples[["pay_fee", "fee_mileage", "total_weight"]].head())
+    
     return model
 
 

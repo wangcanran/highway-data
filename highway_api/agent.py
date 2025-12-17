@@ -279,7 +279,6 @@ class HighwayAPIAgent:
                                 {
                                     'section_region': 'G561区域',
                                     'time_period': '上午时段(06-12)',
-                                    'section_name': '麻文高速',
                                     'vehicle_class': '11',
                                     'vehicle_plate_color_id': '0',
                                     'axis_count': '2',

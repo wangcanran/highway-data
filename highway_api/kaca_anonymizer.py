@@ -79,11 +79,9 @@ class KACAAnonymizer:
             cluster_indices = [i for i, c in enumerate(clusters) if c == cluster_id]
             cluster_size = len(cluster_indices)
             
-            if cluster_size < self.k_value:
-                # 抑制：聚类大小 < k
-                suppressed_count += cluster_size
+            if cluster_size == 0:
                 continue
-            
+
             # 获取聚类中的原始记录数据
             cluster_records = [record_data[i] for i in cluster_indices]
             
@@ -176,7 +174,6 @@ class KACAAnonymizer:
                 'real_money',
                 'card_pay_toll',
                 'discount_type',
-                'section_name',
             ]:
                 if hasattr(record, attr):
                     value = getattr(record, attr)
@@ -250,51 +247,80 @@ class KACAAnonymizer:
         centers: np.ndarray
     ) -> np.ndarray:
         """
-        合并大小 < k 的小聚类到最近的大聚类
+        合并大小 < k 的小聚类（改进版：迭代合并策略）
+        
+        策略：
+        只要存在大小 < k 的簇：
+        1. 找出成员数最小的那个簇 (Source)
+        2. 找出距离 Source 最近的另一个簇 (Target)
+        3. 将 Source 合并进 Target
+        4. 更新 Target 的中心点（可选，简化起见可暂不更新中心或仅加权更新）
+        5. 重复直到所有簇 >= k
         
         Args:
             features: 特征矩阵
             labels: 初始聚类标签
-            centers: 聚类中心
+            centers: 聚类中心 (注意：迭代过程中中心点可能会偏离，但在合并决策中仍作为参考)
             
         Returns:
             合并后的聚类标签
         """
-        merged_labels = labels.copy()
-        unique_labels = np.unique(labels)
+        current_labels = labels.copy()
+        unique_labels = np.unique(current_labels)
         
-        # 计算每个聚类的大小
-        cluster_sizes = {label: np.sum(labels == label) for label in unique_labels}
+        # 初始簇大小统计
+        cluster_sizes = {lbl: np.sum(current_labels == lbl) for lbl in unique_labels}
         
-        # 找出小聚类（大小 < k）
-        small_clusters = [label for label, size in cluster_sizes.items() if size < self.k_value]
-        large_clusters = [label for label, size in cluster_sizes.items() if size >= self.k_value]
-        
-        if not large_clusters:
-            # 没有大聚类，将所有记录归为一个聚类
-            return np.zeros_like(labels)
-        
-        # 合并小聚类
-        for small_label in small_clusters:
-            # 找到小聚类中的所有记录
-            small_indices = np.where(labels == small_label)[0]
+        # 迭代直到所有簇都满足 k-匿名条件
+        while True:
+            # 找出所有不满足条件的簇
+            small_clusters = [lbl for lbl, size in cluster_sizes.items() if size < self.k_value]
             
-            # 找到最近的大聚类
-            small_center = centers[small_label]
+            if not small_clusters:
+                break  # 所有簇都已满足条件
+            
+            # 如果只剩下一个簇了，但仍然小于 k（说明总数据量 < k），无法继续合并
+            # 这种情况下只能保留现状（或者抛出警告，但在本系统中允许返回全部数据作为一个组）
+            if len(cluster_sizes) == 1:
+                break
+                
+            # 策略：找出最小的那个簇进行合并
+            # 按大小排序，取最小的
+            source_label = min(small_clusters, key=lambda x: cluster_sizes[x])
+            
+            # 计算 source 簇的中心（因为合并后 labels 变了，需要实时计算）
+            source_mask = (current_labels == source_label)
+            source_center = np.mean(features[source_mask], axis=0)
+            
+            # 寻找最近的邻居簇 (Target)
             min_dist = float('inf')
-            nearest_large_label = large_clusters[0]
+            target_label = -1
             
-            for large_label in large_clusters:
-                large_center = centers[large_label]
-                dist = np.linalg.norm(small_center - large_center)
+            for candidate_label in cluster_sizes.keys():
+                if candidate_label == source_label:
+                    continue
+                
+                # 计算 candidate 簇的中心
+                candidate_mask = (current_labels == candidate_label)
+                candidate_center = np.mean(features[candidate_mask], axis=0)
+                
+                dist = np.linalg.norm(source_center - candidate_center)
                 if dist < min_dist:
                     min_dist = dist
-                    nearest_large_label = large_label
+                    target_label = candidate_label
             
-            # 合并到最近的大聚类
-            merged_labels[small_indices] = nearest_large_label
-        
-        return merged_labels
+            if target_label == -1:
+                # 理论上不应该发生，除非只有一个簇
+                break
+                
+            # 执行合并：Source -> Target
+            current_labels[current_labels == source_label] = target_label
+            
+            # 更新统计信息
+            cluster_sizes[target_label] += cluster_sizes[source_label]
+            del cluster_sizes[source_label]
+            
+        return current_labels
     
     def _generalize_qids(self, cluster_records: List[Dict[str, Any]]) -> Tuple[str, str]:
         """

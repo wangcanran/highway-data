@@ -1,0 +1,56 @@
+数据结构\n收费站基础信息\n\n字段名 | 字段中文名 | 中文注释 | 数据类型及长度 | 代码集 | 必填 | 备注（规则）\nID | 收费站编号 |  | varchar(20) |  | 是 | 由收费路段编号+收费站顺序码+保留位构成\nNAME | 收费站名称 |  | varchar(50) |  | 是 | \nSECTIONID | 收费路段编号 |  | varchar(20) |  | 是 | \nTYPE | 收费站类型 |  | Int |  | 是 | 1-省界站
+2-普通站\nOPERATION | 操作标记位 |  | Int |  | 是 | 1-新增
+2-变更
+3-删除\nSTATIONID | 收费站ID |  | varchar(8) |  |  | \nSTATIONSTATUS | 使用状态 |  | Int |  | 否 | 1-在建
+2-运行
+3-撤销
+4-停用\nREALTYPE | 实体类型 |  | Int |  | 否 | 1-实体
+2-虚拟\nAGENCYGANTRYIDS | 代收门架编号 |  | varchar(150) |  | 否 | 填写代收门架编号,用“|”间隔\nGANTRYTYPE | 门架类型 |  | Int |  | 否 | \nSECTIONNAME | 收费路段名称 |  | varchar(20) |  | 是 | \n\n门架基础信息\n\n字段名 | 字段中文名 | 中文注释 | 数据类型及长度 | 代码集 | 必填 | 备注（规则）\nID | 收费门架编号 |  | varchar(19) |  | 是 | 由收费单元编号+顺序码+保留位构成\nNAME | 门架名称 |  | varchar(150) |  | 是 | 以起始收费站（或互通名称）-终点收费站（或互通）名称命名+门架顺序码\nGANTRYTYPE | 门架类型 |  | Int |  | 是 | 0-路段收费门架
+1-省界收费门架\nLENGTH | 距离 |  | Int |  | 否 | 单位:米\nGANTRYSTATUS | 使用状态 |  | Int |  | 否 | 1-停用
+2-在用
+9-备用\nETCGANTRYHEX | 门架HEX字符串 |  | varchar(20) |  | 否 | \nBOUNDARYTYPE | 省界入出口标识 |  | Int |  | 否 | 1-省界入口
+2-省界出口\nGANTRYSIGN | 门架标志 |  | varchar |  | 否 | \nISGANTRYTYPE | 门架种类 |  | varchar |  | 否 | 1-实体门架
+2-虚拟门架
+3-站兼门架\nLANECOUNT | 车道数 |  | varchar |  | 否 | 按照主车道数+应急车道数的方式填报,主车道数和应急车道数用”|”隔开\nLANEGANTRY | 是否车道兼门架 |  | Int |  | 否 | 1-否
+2-是\nREETCGANTRYHEX | 反向门架HEX字符串 |  | varchar |  | 否 | \nAGENCYGANTRYIDS | 代收门架编号 |  | varchar |  | 否 | 填写代收门架编号,用“|”间隔\nDIRECTION | 方向 |  | int |  | 否 | 1-上行
+2-下行\nSTARTSTATIONID | 起点收费站ID |  | Int |  | 否 | \nENDSTATIONID | 止点收费站ID |  | int |  | 否 | \nNEIGHBORID | 邻省省界收费单元的id |  | varchar(16) |  | 否 | \nREVERSEID | 反向门架id |  | varchar(19) |  | 否 | \nSECTIONID | 收费路段编号 |  | varchar(20) |  | 是 | \nSECTIONNAME | 收费路段名称 |  | varchar(20) |  | 是 | \n\n门架通行数据\n\n字段名 | 字段中文名 | 中文注释 | 数据类型及长度 | 代码集 | 必填 | 备注（规则）\ntradeId | 计费交易编号（唯一索引） |  | varchar(50) |  | 是 | 门架编号+交易批次号+主备卡标记（1-ETC主、2- ETC备、3-CPC主、4-CPC备）+批次内流水号（5位，00001~99999）\ngantryId | 门架编号 |  | varchar(19) |  | 是 | 全网唯一编号\ngantryType | 门架类型 |  | Int |  | 是 | 1-路段
+2-省界入口
+3-省界出口\ntransTime | 计费交易时间 |  | Datatime |  | 是 | YYYY-MM-DDTHH:mm:ss\npayFee | 应收金额 |  | Bigint |  | 是 | 单位：分，默认0。应收金额为优惠前金额\nfee | 交易金额 |  | Bigint |  | 是 | 单位：分，默认0。交易金额=应收金额-优惠金额\ndiscountFee | 优惠金额 |  | Bigint |  | 是 | 单位：分，默认0。优惠金额为优惠减免金额，未优惠填0\nmediaType | 通行介质类型 |  | Int |  | 是 | 1-OBU（单片式、双片式）
+2-CPC卡\nvehicleType | 入口车型 |  | Int | 2.2.3 | 是 | \nidentifyVehicleType | 识别的车型 |  | Int | 2.2.3 | 否 | 同上,预留车型识别器使用\nvehicleClass | 车种 |  | Int | 2.2.4 | 是 | \nvehicleSign | 车辆状态标识 |  | varchar(100) |  | 是 | 本字段由收费车道或ETC门架填写
+0x00-大件运输（交易成功时有效）
+0x01-非优惠车
+0x02-绿通车
+0x03-联合收割机
+0x04-集装箱车
+0x05-0xfe 预留
+0xff为默认值\ntransType | 交易类型标识 |  | varchar(4) |  | 否 | PBOC定义，如06为传统交易，09为复合交易。计费成功必填。\npassState | 通行状态 |  | Int |  | 否 | 1-有入口；2-无入口\nenTime | 入口交易发生的时间 |  | Timestamp |  | 否 | YYYY-MM-DDTHH:mm:ss\nenLaneType | 入口车道类型 |  | varchar(10) |  | 否 | 1-混合（ETC+MTC）
+3-ETC专用\npassId | 通行标识ID |  | varchar(50) |  | 是 | ETC长度从30为调整为36位；  
+（1）“01“+”卡网络编号“+”用户卡编号“+”卡内入口时间“，计费使用  
+（2）“00“+”0000“+” OBU序号编码“+”OBU内入口时间“，  
+CPC车辆通行标识passId，格式为“02“+”0000“+” CPC卡编码“+”入口时间“\naxleCount | 车轴数 |  | Int |  | 否 | 大于等于2,货车必填\ntotalWeight | 车货总重 |  | Bigint |  | 否 | 单位：kg\nCPUCardType | CPU卡类型 |  | Bigint |  | 否 | 0-默认值
+1-储值卡
+2-记账卡\nfeeVehicleType | 计费车型 |  | Int |  | 否 | 默认值 -1
+计费模块计费时使用的车型\nfeeMileage | 计费里程数 |  | Bigint |  | 否 | 由计费模块返回的本次计费的总里程数（单位:米）\nfeeProvBeginHex | 本省计费起点 |  | varchar(30) |  | 否 | ETC同标签EF04文件中的本省入口编码，
+CPC同EF02文件中的本省入口ETC门架信息中的3字节ETC门架编码\nOBUFeeSumBefore | 本次交易前标签累计实收金额 |  | Bigint |  | 是 | 本次交易前标签累计实收金额
+默认值-1\nOBUFeeSumAfter | 本次交易后标签累计实收金额 |  | Bigint |  | 是 | 本次交易后标签累计实收金额
+默认值-1\npayFeeProvSumLocal | 本省累计金额取整 |  | Bigint |  | 是 | ETC表示本省累计应收金额取整（含本门架应收金额）。
+CPC表示本省累计金额取整（含本门架计费金额），对应计费模块返回的payFeeProvSumLocal字段
+默认值-1\nSECTIONID | 收费路段编号 |  | varchar(20) |  | 是 | \nSECTIONNAME | 收费路段名称 |  | varchar(20) |  | 是 | \n\n入口通行数据\n\n字段名 | 字段中文名 | 中文注释 | 数据类型及长度 | 代码集 | 必填 | 备注（规则）\nID | 国标流水ID |  | VARCHAR2 (40) |  | 必填 | 入口车道编号+交易批次号（YYYYMMDDHH）+批次内流水号（6位）\nVEHCLASS | 车型 |  | SMALLINT | 2.2.3 |  | \nAUTOVEHCLASS | 识别车型 |  | SMALLINT | 2.2.3 |  | \nTRANSTIME | 交易时间 |  | TIMESTAMP |  | 必填 | \nAUTOVPCOLORID | 识别车牌颜色 |  | SMALLINT | 2.2.2 |  | \nMANUALVPCOLORID | 输入车牌颜色 |  | SMALLINT | 2.2.2 |  | \nCARDTYPE | 卡类型 |  | SMALLINT | 2.2.10 | 必填 | \nGBVEHKIND | 国标车种 |  | smallint | 2.2.4 | 必填 | \nPASSID | 通行标识ID |  | varchar(50) |  | 是 | ETC长度从30为调整为36位；  
+（1）“01“+”卡网络编号“+”用户卡编号“+”卡内入口时间“，计费使用  
+（2）“00“+”0000“+” OBU序号编码“+”OBU内入口时间“，  
+CPC车辆通行标识passId，格式为“02“+”0000“+” CPC卡编码“+”入口时间“\nVEHICLESIGN | 车辆状态标识 |  | VARCHAR(10) | 本字段由收费车道或 ETC
+门架填写
+0x00-大件运输
+0x01-非优惠车
+0x02-绿通车
+0x03-联合收割机车
+0x04-集装箱车
+0x05-0xfe 预留
+0xff 为默认值 | 必填 | \nSECTIONID | 收费路段编号 |  | varchar(20) |  | 是 | \nSECTIONNAME | 收费路段名称 |  | varchar(20) |  | 是 | \n\n注：收费站信息使用 ‘国标流水ID’截取前14位后与收费站信息进行连接\n出口通行数据\n\n字段名 | 字段中文名 | 中文注释 | 数据类型及长度 | 代码集 | 必填 | 备注（规则）\nID | 国标流水ID |  | VARCHAR(20) |  | 必填 | \nVEHCLASS | 车型 |  | smallint | 2.2.3 |  | \nENVEHCLASS | 入口车型 |  | smallint | 2.2.3 |  | \nVEHPLATECOLORID | 车牌颜色 |  | smallint | 2.2.2 |  | \nTRANSTIME | 出口交易时间 |  | TIMESTAMP |  | 必填 | \nAXISNUM | 轴数 |  | smallint |  |  | \nTOTALLIMIT | 限重 |  | int |  |  | \nTOTALWEIGHT | 总重 |  | FLOAT |  |  | \nCARDTYPE | 卡类型 |  | smallint | 2.2.10 |  | \nCARDVEHPLATECOLORID | 卡内车牌颜色 |  | SMALLINT |  |  | \nCARDVEHCLASS | 卡内车型 |  | smallint | 2.2.3 |  | \nPAYTYPE | 付费方式 |  | Smallint | 2.2.5 |  | \nPAYCARDTYPE | 支付卡类型 |  | Smallint |  |  | \nTOLLMONEY | 应收费额 |  | Decimal(19,4) |  |  | 单位：元\nREALMONEY | 实收金额 |  | Decimal(19,4) |  |  | 单位：元\nCARDPAYTOLL | 支付卡支付额 |  | Decimal(19,4) |  |  | 单位：元\nENVEHPLATECOLORID | 入口车牌颜色 |  | SMALLINT |  |  | \nENTIME | 入口时间 |  | TIMESTAMP |  |  | \nENWEIGHT | 入口车货总重 |  | Bigint |  |  | \nENAXLECOUNT | 入口轴数 |  | Bigint |  |  | \nGBVEHKIND | 国标车种 |  | Smallint | 2.2.4 | 必填 | \nDISCOUNTTYPE | 优惠类型 |  | SMALLINT | 1-绿通
+2-联合收割机
+3-J1类型集装箱
+4- J2类型集装箱
+5-节假日（2020年4月4日新增） |  | \npassId | 通行标识ID |  | varchar(50) |  | 是 | ETC长度从30为调整为36位；  
+（1）“01“+”卡网络编号“+”用户卡编号“+”卡内入口时间“，计费使用  
+（2）“00“+”0000“+” OBU序号编码“+”OBU内入口时间“，  
+CPC车辆通行标识passId，格式为“02“+”0000“+” CPC卡编码“+”入口时间“\nSECTIONID | 收费路段编号 |  | varchar(20) |  | 是 | \nSECTIONNAME | 收费路段名称 |  | varchar(20) |  | 是 | \n\n注：收费站信息使用 ‘国标流水ID’截取前14位后与收费站信息进行连接\n代码集\n车牌颜色基础信息\n\n代码 | 名称\n0 | 蓝色\n1 | 黄色\n2 | 黑色\n3 | 白色\n4 | 渐变绿\n5 | 黄绿双拼\n6 | 蓝白渐变\n9 | 未知\n\n收费车型基础信息\n\n代码 | 名称\n0 | 未知\n1 | 一型客车\n2 | 二型客车\n3 | 三型客车\n4 | 四型客车\n11 | 一型货车\n12 | 二型货车\n13 | 三型货车\n14 | 四型货车\n15 | 五型货车\n16 | 六型货车\n21 | 一型专项车\n22 | 二型专项车\n23 | 三型专项车\n24 | 四型专项车\n25 | 五型专项车\n26 | 六型专项车\n\n收费车类基础信息\n\n代码 | 名称\n0 | 普通\n8 | 军警\n10 | 紧急\n14 | 车队\n21 | 绿通车\n22 | 联合收割机\n23 | 抢险救灾\n24 | 集装箱\n25 | 大件运输\n26 | 应急车\n27 | 半挂车\n28 | J2集装箱\n\n收费支付方式基础信息\n\n代码 | 名称\n1 | 现金\n2 | 其他第三方支付\n3 | 银联卡支付\n4 | ETC交易\n6 | 支付宝\n7 | 微信\n\n收费交易介质基础信息\n\n代码 | 名称\n1 | OBU\n2 | CPC卡\n3 | 纸券\n4 | ETC卡\n9 | 无通行介质\n

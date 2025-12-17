@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DGM大模型数据生成 - 高质量门架交易数据</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #064e3b, #022c22);
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .header-bar {
+      border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+      background: linear-gradient(135deg, #064e3b, #022c22);
+    }
+    .quality-badge {
+      background: linear-gradient(135deg, #10b981, #14b8a6);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .api-card {
+      background: radial-gradient(circle at top left, #022c22, #064e3b);
+      border-radius: 1rem;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      box-shadow: 0 18px 40px rgba(6, 78, 59, 0.6);
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .api-card:hover {
+      transform: translateY(-4px) scale(1.01);
+      border-color: #10b981;
+      box-shadow: 0 25px 60px rgba(16, 185, 129, 0.5);
+    }
+    .api-badge {
+      border-radius: 999px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .metric-card {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 78, 59, 0.2));
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      text-align: center;
+    }
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #10b981, #14b8a6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    pre {
+      font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background: #022c22;
+      color: #34d399;
+      max-height: 400px;
+      overflow: auto;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 0.5rem;
+    }
+    code {
+      font-family: inherit;
+      color: #34d399;
+    }
+    .btn-soft {
+      border-radius: 999px;
+    }
+    .feature-icon {
+      width: 3rem;
+      height: 3rem;
+      background: linear-gradient(135deg, #10b981, #14b8a6);
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <header class="header-bar py-3 mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-3">
+        <div class="feature-icon">
+          <i class="fas fa-brain"></i>
+        </div>
+        <div>
+          <h1 class="h4 mb-1 text-light d-flex align-items-center gap-2">
+            DGM大模型数据生成
+            <span class="quality-badge">
+              <i class="fas fa-star"></i> 生产级质量
+            </span>
+          </h1>
+          <p class="mb-0 text-secondary small">LLM智能生成 · 判别式模型验证 · 完整质量评估 · 三阶段DGM框架</p>
+        </div>
+      </div>
+      <a href="/" class="btn btn-outline-light btn-sm btn-soft">
+        <i class="fas fa-home me-1"></i> 返回首页
+      </a>
+    </div>
+  </header>
+
+  <main class="container mb-5">
+    <!-- 核心优势 -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="alert alert-success border-0" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 78, 59, 0.3)); border-left: 4px solid #10b981 !important;">
+          <h5 class="alert-heading d-flex align-items-center gap-2">
+            <i class="fas fa-check-circle"></i> 为什么选择DGM？
+          </h5>
+          <p class="mb-2">DGM（Data Generation Model）是基于论文级别框架的高质量数据生成系统，相比传统规则生成和CTGAN模型生成，具有显著优势：</p>
+          <ul class="mb-0">
+            <li><strong>最高质量</strong>：Direct评估 89.94%，统计特征相似度 81.13%，高质量样本占比 80%</li>
+            <li><strong>智能生成</strong>：使用GPT-4进行分步生成，理解数据的内在逻辑和关联关系</li>
+            <li><strong>自动验证</strong>：集成判别式模型（Isolation Forest + Gradient Boosting）自动检测和修正异常</li>
+            <li><strong>完整评估</strong>：提供Direct和Indirect两类评估，包含7项质量指标</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 性能指标 -->
+    <div class="row mb-4">
+      <div class="col-md-3 col-6 mb-3">
+        <div class="metric-card">
+          <div class="metric-value">89.94%</div>
+          <div class="text-secondary small mt-1">Direct评分</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6 mb-3">
+        <div class="metric-card">
+          <div class="metric-value">81.13%</div>
+          <div class="text-secondary small mt-1">统计特征</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6 mb-3">
+        <div class="metric-card">
+          <div class="metric-value">80%</div>
+          <div class="text-secondary small mt-1">高质量样本</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6 mb-3">
+        <div class="metric-card">
+          <div class="metric-value">0%</div>
+          <div class="text-secondary small mt-1">低质量样本</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API列表 -->
+    <p class="text-secondary mb-3">
+      使用下列 API 可以生成高质量的门架交易数据。推荐首次使用时先调用初始化接口，然后使用生成接口获取数据和完整的质量评估报告。
+    </p>
+
+    <div id="dgm-api-container" class="row mt-3"></div>
+
+    <p class="text-secondary mt-4 small">
+      <i class="fas fa-info-circle me-1"></i> 提示：DGM生成器使用单例模式，初始化一次后可重复调用生成接口。完整使用指南请参考 <code>DGM_API_GUIDE.md</code>
+    </p>
+  </main>
+
+<script>
+(function() {
+  const baseUrl = window.location.origin;
+
+  const apis = [
+    {
+      id: 'quick-generate',
+      title: '快速生成 API（推荐）',
+      description: '最简单的使用方式，自动初始化并生成数据。适合测试和快速集成。',
+      method: 'GET',
+      endpoint: '/api/generate/gantry',
+      badge: { text: '推荐', color: 'success' },
+      request: {
+        type: 'URL参数',
+        example: `${baseUrl}/api/generate/gantry?method=dgm&count=10`
+      },
+      requestBody: null,
+      response: {
+        description: '返回生成的门架交易数据数组',
+        example: `[
+  {
+    "gantry_transaction_id": "S001453001000820010202512051209310347",
+    "pass_id": "010000PASS2025120512093192381465",
+    "gantry_id": "S001453001000720010",
+    "section_id": "S0014530010",
+    "section_name": "宜宾至毕节高速威信至镇雄段",
+    "transaction_time": "2023-03-15T13:47:25Z",
+    "entrance_time": "2023-03-15T11:42:25Z",
+    "vehicle_type": "2",
+    "axle_count": "2",
+    "total_weight": "3725",
+    "vehicle_sign": "0x01",
+    "pay_fee": 3079,
+    "discount_fee": 154,
+    "fee_mileage": "41056"
+  }
+]`
+      }
+    },
+    {
+      id: 'initialize',
+      title: '初始化生成器 API',
+      description: '初始化DGM生成器，加载真实数据并训练判别式模型。首次使用时必须调用，约需30-60秒。',
+      method: 'POST',
+      endpoint: '/api/dgm/initialize',
+      badge: { text: '首次必调', color: 'warning' },
+      request: {
+        type: 'JSON',
+        example: `{
+  "real_data_limit": 300,
+  "evaluation_limit": 1000,
+  "use_discriminative": true
+}`
+      },
+      requestBody: {
+        real_data_limit: '用于学习统计特征的真实数据量（默认300）',
+        evaluation_limit: '用于Benchmark评估的真实数据量（默认1000）',
+        use_discriminative: '是否使用判别式模型验证（默认true）'
+      },
+      response: {
+        description: '返回初始化结果',
+        example: `{
+  "status": "success",
+  "message": "DGM Generator initialized successfully",
+  "config": {
+    "training_samples": 300,
+    "evaluation_samples": 1000,
+    "use_discriminative": true,
+    "data_source": "database"
+  }
+}`
+      }
+    },
+    {
+      id: 'generate',
+      title: '生成数据 API（含完整评估）',
+      description: '生成高质量数据并返回完整的质量评估报告。包含Direct和Indirect两类评估。',
+      method: 'POST',
+      endpoint: '/api/dgm/generate',
+      badge: { text: '核心接口', color: 'primary' },
+      request: {
+        type: 'JSON',
+        example: `{
+  "count": 50,
+  "verbose": false
+}`
+      },
+      requestBody: {
+        count: '生成样本数量（推荐10-500）',
+        verbose: '是否输出详细日志（默认false）'
+      },
+      response: {
+        description: '返回生成的样本和完整评估报告',
+        example: `{
+  "status": "success",
+  "count": 50,
+  "samples": [ /* 50条门架交易数据 */ ],
+  "evaluation": {
+    "direct": {
+      "overall_score": 0.8994,
+      "faithfulness": 0.9123,
+      "diversity": 0.88,
+      "benchmark_similarity": 0.8247
+    },
+    "indirect": {
+      "overall_score": 0.9125,
+      "tasks": {
+        "anomaly_detection": 1.0,
+        "fee_prediction": 0.6501,
+        "vehicle_classification": 1.0,
+        "time_consistency": 1.0
+      }
+    }
+  },
+  "quality_distribution": {
+    "high": 40,
+    "medium": 10,
+    "low": 0
+  }
+}`
+      }
+    },
+    {
+      id: 'stats',
+      title: '查看统计信息 API',
+      description: '获取生成器学习到的真实数据统计特征，包括费用、里程、相关性等。',
+      method: 'GET',
+      endpoint: '/api/dgm/stats',
+      badge: { text: '调试', color: 'info' },
+      request: {
+        type: '无需参数',
+        example: `${baseUrl}/api/dgm/stats`
+      },
+      requestBody: null,
+      response: {
+        description: '返回learned_stats字典',
+        example: `{
+  "status": "success",
+  "learned_stats": {
+    "by_vehicle": {
+      "passenger": {
+        "pay_fee": {
+          "mean": 1420,
+          "std": 1200,
+          "min": 63,
+          "max": 10557
+        },
+        "fee_mileage": {
+          "mean": 13107,
+          "std": 8500
+        },
+        "correlation": 0.7499
+      },
+      "truck": { /* ... */ }
+    }
+  }
+}`
+      }
+    },
+    {
+      id: 'status',
+      title: '查看状态 API',
+      description: '检查DGM生成器是否已初始化，用于健康检查。',
+      method: 'GET',
+      endpoint: '/api/dgm/status',
+      badge: { text: '健康检查', color: 'secondary' },
+      request: {
+        type: '无需参数',
+        example: `${baseUrl}/api/dgm/status`
+      },
+      requestBody: null,
+      response: {
+        description: '返回生成器状态',
+        example: `{
+  "status": "success",
+  "is_initialized": true,
+  "use_discriminative": true
+}`
+      }
+    }
+  ];
+
+  function renderAPIs() {
+    const container = document.getElementById('dgm-api-container');
+    
+    apis.forEach((api) => {
+      const col = document.createElement('div');
+      col.className = 'col-12 mb-4';
+      
+      const badgeClass = api.badge ? 
+        `bg-${api.badge.color}` : 'bg-secondary';
+      
+      const requestBodyHTML = api.requestBody ? `
+        <div class="mt-3">
+          <strong class="text-light">请求参数：</strong>
+          <ul class="list-unstyled ms-3 mt-2">
+            ${Object.entries(api.requestBody).map(([key, desc]) => `
+              <li class="mb-1">
+                <code>${key}</code>: <span class="text-secondary">${desc}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      ` : '';
+      
+      col.innerHTML = `
+        <div class="api-card p-4">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h5 class="text-light mb-1 d-flex align-items-center gap-2">
+                ${api.title}
+                ${api.badge ? `<span class="api-badge ${badgeClass}">${api.badge.text}</span>` : ''}
+              </h5>
+              <p class="text-secondary mb-0 small">${api.description}</p>
+            </div>
+            <span class="api-badge bg-${api.method === 'GET' ? 'info' : 'warning'}">
+              ${api.method}
+            </span>
+          </div>
+          
+          <div class="mb-3">
+            <strong class="text-light">端点：</strong>
+            <code class="ms-2">${api.endpoint}</code>
+          </div>
+          
+          <div class="mb-3">
+            <strong class="text-light">请求示例（${api.request.type}）：</strong>
+            <pre class="mt-2 mb-0 p-3"><code>${api.request.example}</code></pre>
+          </div>
+          
+          ${requestBodyHTML}
+          
+          <div>
+            <strong class="text-light">响应示例：</strong>
+            <p class="text-secondary small mb-2">${api.response.description}</p>
+            <pre class="mt-2 mb-0 p-3"><code>${api.response.example}</code></pre>
+          </div>
+        </div>
+      `;
+      
+      container.appendChild(col);
+    });
+  }
+
+  renderAPIs();
+})();
+</script>
+
+</body>
+</html>

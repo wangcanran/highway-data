@@ -10,9 +10,11 @@ from functools import wraps
 from agent import HighwayAPIAgent
 from gantry_rule_generator import generate_rule_based_gantry_transaction
 from model_gantry_generator import generate_model_based_gantry
+from dgm_api import generate_dgm_gantry, get_dgm_api
 import config
 from sqlalchemy import func, text, case, desc
 from sqlalchemy.sql import extract
+import random, math
 
 # 导入模型和schemas
 from models import db, Section, TollStation, Gantry, EntranceTransaction, ExitTransaction, GantryTransaction
@@ -48,13 +50,24 @@ def data_synthesis_page():
     return render_template('data_synthesis.html')
 
 
+@app.route("/dgm-generation", methods=["GET"])
+def dgm_generation_page():
+    """DGM大模型数据生成页面"""
+    return render_template('dgm_generation.html')
+
+
 @app.route("/api/generate/gantry", methods=["GET", "POST"])
 def api_generate_gantry():
     """统一的门架数据生成服务。
 
-    支持两种调用方式:
+    支持三种调用方式:
     - GET:  /api/generate/gantry?method=rule&count=3
-    - POST: JSON {"method": "rule"|"model", "count": 3}
+    - POST: JSON {"method": "rule"|"model"|"dgm", "count": 3}
+    
+    方法说明:
+    - rule: 基于规则的生成（快速，但质量一般）
+    - model: 基于CTGAN模型的生成（质量较好）
+    - dgm: 基于DGM框架的生成（最高质量，包含评估）
     """
 
     # 解析 method / count
@@ -78,8 +91,11 @@ def api_generate_gantry():
         records = [generate_rule_based_gantry_transaction() for _ in range(count)]
     elif method == "model":
         records = generate_model_based_gantry(count)
+    elif method == "dgm":
+        # DGM方法：生成高质量数据
+        records = generate_dgm_gantry(count=count, auto_init=True)
     else:
-        return jsonify({"error": f"unknown method: {method}, expected 'rule' or 'model'"}), 400
+        return jsonify({"error": f"unknown method: {method}, expected 'rule', 'model', or 'dgm'"}), 400
 
     return jsonify(records)
 
@@ -611,7 +627,6 @@ def get_truck_hourly_flow():
         epsilon = 1.0
         scale = 1.0 / epsilon  # Laplace(0, 1/epsilon)
         
-        import random, math
         
         def laplace_noise(scale_value: float) -> float:
             """生成拉普拉斯噪声（中心0，尺度scale_value）"""
@@ -1233,6 +1248,105 @@ def test_connection():
         return jsonify({
             'success': False,
             'error': str(e)
+        }), 500
+
+# ==================== DGM数据生成专用API ====================
+
+@app.route('/api/dgm/initialize', methods=['POST'])
+def dgm_initialize():
+    """初始化DGM生成器
+    
+    POST /api/dgm/initialize
+    {
+        "real_data_limit": 300,
+        "evaluation_limit": 1000,
+        "use_discriminative": true
+    }
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        
+        real_data_limit = data.get('real_data_limit', 300)
+        evaluation_limit = data.get('evaluation_limit', 1000)
+        use_discriminative = data.get('use_discriminative', True)
+        
+        api = get_dgm_api(use_discriminative=use_discriminative)
+        result = api.initialize(
+            real_data_limit=real_data_limit,
+            evaluation_limit=evaluation_limit,
+            use_database=True
+        )
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/dgm/generate', methods=['POST'])
+def dgm_generate():
+    """使用DGM生成器生成数据（包含完整评估）
+    
+    POST /api/dgm/generate
+    {
+        "count": 50,
+        "verbose": false
+    }
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        
+        count = data.get('count', 10)
+        verbose = data.get('verbose', False)
+        
+        api = get_dgm_api()
+        result = api.generate(count=count, verbose=verbose)
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'samples': []
+        }), 500
+
+
+@app.route('/api/dgm/stats', methods=['GET'])
+def dgm_stats():
+    """获取DGM生成器学习到的统计信息
+    
+    GET /api/dgm/stats
+    """
+    try:
+        api = get_dgm_api()
+        result = api.get_stats()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/dgm/status', methods=['GET'])
+def dgm_status():
+    """获取DGM生成器状态
+    
+    GET /api/dgm/status
+    """
+    try:
+        api = get_dgm_api()
+        return jsonify({
+            'status': 'success',
+            'is_initialized': api.is_initialized,
+            'use_discriminative': api.use_discriminative
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
         }), 500
 
 if __name__ == '__main__':
