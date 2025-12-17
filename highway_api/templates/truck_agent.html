@@ -706,11 +706,14 @@
                 });
 
                 const data = await response.json();
+                console.log('收到响应数据:', data);
                 
                 loading.classList.add('hidden');
                 
                 if (data.success) {
                     // 统一Agent返回成功，根据execution_type显示不同类型的结果
+                    console.log('执行类型:', data.execution_type);
+                    console.log('推荐列表:', data.recommendations);
                     displayUnifiedResults(data);
                     results.classList.remove('hidden');
                     
@@ -801,16 +804,13 @@
         }
 
         function displayUnifiedResults(data) {
-            const resultsContainer = document.getElementById('results');
-            
             if (data.execution_type === 'api') {
-                // API推荐结果
-                displayAPIRecommendations(data);
+                // API推荐结果 - 完全使用旧版UI
+                displayResults(data);
             } else if (data.execution_type === 'workflow') {
-                // 工作流执行结果
+                // 工作流执行结果 - 使用新UI
                 displayWorkflowResultUnified(data);
             } else {
-                // 未知类型
                 showErrorMessage('返回了未知的结果类型', null);
             }
         }
@@ -1053,9 +1053,9 @@
                             <div class="mb-4">
                                 <h6 class="text-sm font-bold text-gray-400 mb-2">完整URL（可直接调用）</h6>
                                 <div class="bg-slate-900/50 rounded-lg p-3 font-mono text-xs text-blue-400 break-all">
-                                    ${api.full_url}
+                                    ${api.full_url || api.endpoint}
                                 </div>
-                                <button onclick="copyToClipboard('${api.full_url.replace(/'/g, "\\'")}', this)" 
+                                <button onclick="copyURL('${api.endpoint}', '${(api.full_url || api.endpoint).split('?')[1] || ''}')" 
                                         class="mt-2 px-4 py-2 bg-blue-900/60 hover:bg-blue-800 text-blue-300 rounded-lg text-sm font-semibold border border-blue-700 transition-all">
                                     <i class="fas fa-copy mr-2"></i>复制URL
                                 </button>
@@ -1068,19 +1068,33 @@
             resultsContainer.innerHTML = html;
         }
         
-        function copyToClipboard(text, button) {
-            navigator.clipboard.writeText(text).then(() => {
-                const originalText = button.innerHTML;
-                button.innerHTML = '<i class="fas fa-check mr-2"></i>已复制';
-                button.classList.add('bg-green-900/60', 'text-green-300', 'border-green-700');
-                button.classList.remove('bg-blue-900/60', 'text-blue-300', 'border-blue-700');
-                
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.classList.remove('bg-green-900/60', 'text-green-300', 'border-green-700');
-                    button.classList.add('bg-blue-900/60', 'text-blue-300', 'border-blue-700');
-                }, 2000);
+        function copyURL(endpoint, params) {
+            const fullUrl = params ? `${baseUrl}${endpoint}?${params}` : `${baseUrl}${endpoint}`;
+            navigator.clipboard.writeText(fullUrl).then(() => {
+                alert('✅ URL已复制到剪贴板！');
+            }).catch(err => {
+                console.error('复制失败:', err);
+                alert('❌ 复制失败，请手动复制');
             });
+        }
+        
+        function copyAPIExample(button) {
+            const url = button.getAttribute('data-url') || '';
+            if (url) {
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('✅ API示例URL已复制到剪贴板！');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    alert('❌ 复制失败，请手动复制');
+                });
+            }
+        }
+        
+        function testAPI(button) {
+            const url = button.getAttribute('data-url') || '';
+            if (url) {
+                window.open(url, '_blank');
+            }
         }
         
         function displayResults(data) {
@@ -1241,14 +1255,14 @@
                             <i class="fas fa-code"></i>调用示例
                         </h6>
                         <div class="bg-slate-900 rounded-lg p-4 overflow-x-auto border border-slate-700">
-                            <code class="text-green-400 text-sm font-mono break-all">${api.example_url}</code>
+                            <code class="text-green-400 text-sm font-mono break-all">${api.example || api.example_url || api.endpoint}</code>
                         </div>
                         <div class="flex gap-2 mt-3">
-                            <button onclick="copyToClipboard('${api.example_url.replace(/'/g, "\\'")}', 'API示例URL')" 
+                            <button onclick="copyAPIExample(this)" data-url="${api.example || api.example_url || api.endpoint || ''}" 
                                     class="px-4 py-2 bg-purple-900/60 hover:bg-purple-800 text-purple-300 rounded-lg text-sm font-semibold border border-purple-700 transition-all hover:scale-105">
                                 <i class="fas fa-copy mr-2"></i>复制示例URL
                             </button>
-                            <button onclick="window.open('${api.example_url}', '_blank')" 
+                            <button onclick="testAPI(this)" data-url="${api.example || api.example_url || api.endpoint || ''}" 
                                     class="px-4 py-2 bg-blue-900/60 hover:bg-blue-800 text-blue-300 rounded-lg text-sm font-semibold border border-blue-700 transition-all hover:scale-105">
                                 <i class="fas fa-external-link-alt mr-2"></i>在新窗口测试
                             </button>
