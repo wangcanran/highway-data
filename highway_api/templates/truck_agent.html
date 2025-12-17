@@ -818,28 +818,130 @@
         function displayWorkflowResultUnified(data) {
             const resultsContainer = document.getElementById('results');
             const result = data.result || {};
+            const plan = data.plan || {};
+            const apiCalls = data.api_calls || [];
+            const executionLogs = data.execution_logs || [];
             
-            // 构建场景信息卡片
+            // 构建多智能体执行结果卡片
             let html = `
                 <div class="result-card bg-gradient-to-br from-green-900/30 via-emerald-900/30 to-teal-900/30 border-2 border-green-700 rounded-2xl p-6 shadow-lg mb-6">
                     <div class="flex items-center gap-3 mb-4">
                         <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-project-diagram text-white"></i>
+                            <i class="fas fa-brain text-white"></i>
                         </div>
-                        <h4 class="text-xl font-bold text-white">工作流执行结果</h4>
+                        <h4 class="text-xl font-bold text-white">多智能体分析结果</h4>
                     </div>
                     <div class="space-y-3">
                         <p class="text-gray-300"><strong>查询需求：</strong>${data.query}</p>
-                        <p class="text-gray-300"><strong>执行场景：</strong>${data.scenario_name || '未知场景'}</p>
-                        ${data.scenario_description ? `<p class="text-gray-400 text-sm">${data.scenario_description}</p>` : ''}
+                        <p class="text-gray-300"><strong>任务理解：</strong>${plan.task_understanding || data.scenario_description || '自主规划执行'}</p>
                         <div class="flex items-center gap-2">
                             <span class="px-3 py-1 bg-green-900/60 text-green-300 rounded-full text-sm font-bold border border-green-700">
-                                <i class="fas fa-check mr-1"></i>执行成功
+                                <i class="fas fa-check mr-1"></i>分析完成
                             </span>
+                            ${apiCalls.length > 0 ? `
+                            <span class="px-3 py-1 bg-blue-900/60 text-blue-300 rounded-full text-sm font-medium border border-blue-700">
+                                <i class="fas fa-database mr-1"></i>调用${apiCalls.length}个API
+                            </span>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
             `;
+            
+            // 显示整体摘要
+            if (result.summary) {
+                html += `
+                    <div class="result-card bg-slate-800 border-2 border-blue-700 rounded-2xl p-6 shadow-lg mb-6">
+                        <h5 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-lightbulb text-yellow-400"></i>
+                            分析摘要
+                        </h5>
+                        <p class="text-gray-300 leading-relaxed">${result.summary}</p>
+                    </div>
+                `;
+            }
+            
+            // 显示关键发现
+            if (result.key_findings && result.key_findings.length > 0) {
+                html += `
+                    <div class="result-card bg-slate-800 border-2 border-purple-700 rounded-2xl p-6 shadow-lg mb-6">
+                        <h5 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-search text-purple-400"></i>
+                            关键发现
+                        </h5>
+                        <ul class="space-y-3">
+                `;
+                result.key_findings.forEach((finding, index) => {
+                    html += `
+                        <li class="flex items-start gap-3 bg-purple-900/20 border border-purple-700 rounded-lg p-3">
+                            <span class="flex-shrink-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                ${index + 1}
+                            </span>
+                            <span class="text-gray-300 flex-1">${finding}</span>
+                        </li>
+                    `;
+                });
+                html += `
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            // 显示统计数据
+            if (result.statistics && Object.keys(result.statistics).length > 0) {
+                html += `
+                    <div class="result-card bg-slate-800 border-2 border-slate-700 rounded-2xl p-6 shadow-lg mb-6">
+                        <h5 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-chart-pie text-blue-400"></i>
+                            统计数据
+                        </h5>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                `;
+                
+                Object.entries(result.statistics).forEach(([key, value]) => {
+                    // 自动选择颜色
+                    const colors = ['blue', 'green', 'purple', 'yellow', 'red', 'cyan', 'indigo', 'pink'];
+                    const color = colors[Math.abs(key.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % colors.length];
+                    
+                    html += `
+                        <div class="bg-${color}-900/40 border border-${color}-700 rounded-lg p-4 hover:bg-${color}-900/60 transition-all">
+                            <p class="text-sm text-${color}-400 font-medium">${key}</p>
+                            <p class="text-2xl font-bold text-${color}-300 mt-2">${value}</p>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 显示建议
+            if (result.recommendations && result.recommendations.length > 0) {
+                html += `
+                    <div class="result-card bg-slate-800 border-2 border-green-700 rounded-2xl p-6 shadow-lg mb-6">
+                        <h5 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-clipboard-check text-green-400"></i>
+                            优化建议
+                        </h5>
+                        <ul class="space-y-3">
+                `;
+                result.recommendations.forEach((rec, index) => {
+                    html += `
+                        <li class="flex items-start gap-3 bg-green-900/20 border border-green-700 rounded-lg p-3">
+                            <span class="flex-shrink-0 text-green-400">
+                                <i class="fas fa-check-circle"></i>
+                            </span>
+                            <span class="text-gray-300 flex-1">${rec}</span>
+                        </li>
+                    `;
+                });
+                html += `
+                        </ul>
+                    </div>
+                `;
+            }
             
             // 构建统计数据卡片
             const stats = [];
@@ -979,19 +1081,152 @@
                 `;
             }
             
-            // 显示执行日志
-            if (data.execution_logs && data.execution_logs.length > 0) {
+            // 显示API调用记录
+            if (apiCalls.length > 0) {
                 html += `
-                    <div class="result-card bg-slate-800 border-2 border-slate-700 rounded-2xl p-6 shadow-lg">
+                    <div class="result-card bg-slate-800 border-2 border-cyan-700 rounded-2xl p-6 shadow-lg mb-6">
+                        <h5 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-plug text-cyan-400"></i>
+                            API调用记录（${apiCalls.length}个）
+                        </h5>
+                        <div class="space-y-3">
+                `;
+                
+                apiCalls.forEach((call, index) => {
+                    const statusColor = call.success ? 'green' : 'red';
+                    const statusIcon = call.success ? 'check-circle' : 'times-circle';
+                    html += `
+                        <div class="bg-slate-900/50 border border-${statusColor}-700 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-${statusColor}-400 font-bold">步骤${call.step}</span>
+                                    <span class="px-2 py-1 bg-blue-900/60 text-blue-300 rounded text-xs font-mono">
+                                        ${call.tool}
+                                    </span>
+                                </div>
+                                <span class="text-${statusColor}-400">
+                                    <i class="fas fa-${statusIcon}"></i>
+                                </span>
+                            </div>
+                            ${Object.keys(call.params || {}).length > 0 ? `
+                                <div class="text-sm text-gray-400 mt-2">
+                                    <strong>参数：</strong>${JSON.stringify(call.params)}
+                                </div>
+                            ` : ''}
+                            ${call.result && call.result.count !== undefined ? `
+                                <div class="text-sm text-gray-300 mt-2">
+                                    <strong>返回：</strong>${call.result.count} 条记录
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 显示详细数据记录
+            if (result.detailed_data && Object.keys(result.detailed_data).length > 0) {
+                html += `
+                    <div class="result-card bg-slate-800 border-2 border-indigo-700 rounded-2xl p-6 shadow-lg mb-6">
+                        <h5 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-table text-indigo-400"></i>
+                            查询结果明细
+                        </h5>
+                        <div class="space-y-4">
+                `;
+                
+                Object.entries(result.detailed_data).forEach(([key, dataInfo]) => {
+                    const records = dataInfo.records || [];
+                    const count = dataInfo.count || 0;
+                    
+                    if (records.length > 0) {
+                        html += `
+                            <div class="bg-slate-900/50 border border-indigo-600 rounded-lg p-4">
+                                <h6 class="text-md font-semibold text-indigo-300 mb-3">
+                                    ${key} - 共${count}条记录（展示前${records.length}条）
+                                </h6>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm text-gray-300">
+                                        <thead class="text-xs uppercase bg-slate-800 text-gray-400">
+                                            <tr>
+                        `;
+                        
+                        // 动态生成表头
+                        if (records[0]) {
+                            Object.keys(records[0]).forEach(field => {
+                                html += `<th class="px-3 py-2 text-left">${field}</th>`;
+                            });
+                        }
+                        
+                        html += `
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                        `;
+                        
+                        // 显示数据行
+                        records.forEach((record, idx) => {
+                            html += `<tr class="border-b border-slate-700 hover:bg-slate-800/50">`;
+                            Object.values(record).forEach(value => {
+                                // 格式化值显示
+                                let displayValue = value;
+                                if (value === null || value === undefined) {
+                                    displayValue = '-';
+                                } else if (typeof value === 'number') {
+                                    displayValue = value.toLocaleString('zh-CN');
+                                } else if (typeof value === 'string' && value.includes('T')) {
+                                    // 尝试格式化日期
+                                    try {
+                                        displayValue = new Date(value).toLocaleString('zh-CN');
+                                    } catch(e) {
+                                        displayValue = value;
+                                    }
+                                }
+                                html += `<td class="px-3 py-2">${displayValue}</td>`;
+                            });
+                            html += `</tr>`;
+                        });
+                        
+                        html += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 显示执行日志
+            if (executionLogs.length > 0) {
+                html += `
+                    <div class="result-card bg-slate-800 border-2 border-slate-700 rounded-2xl p-6 shadow-lg mb-6">
                         <h5 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
                             <i class="fas fa-terminal text-green-400"></i>
-                            执行日志
+                            执行日志（${executionLogs.length}条）
                         </h5>
                         <div class="bg-slate-900/50 rounded-lg p-4 font-mono text-sm space-y-1 max-h-96 overflow-y-auto">
                 `;
                 
-                data.execution_logs.forEach(log => {
-                    html += `<div class="text-gray-300">${log}</div>`;
+                executionLogs.forEach(log => {
+                    // 根据日志内容着色
+                    let color = 'gray-300';
+                    if (log.includes('✓') || log.includes('成功')) color = 'green-400';
+                    else if (log.includes('✗') || log.includes('失败')) color = 'red-400';
+                    else if (log.includes('[Planner]')) color = 'blue-400';
+                    else if (log.includes('[DataFetcher]')) color = 'cyan-400';
+                    else if (log.includes('[Analyzer]')) color = 'purple-400';
+                    
+                    html += `<div class="text-${color}">${log}</div>`;
                 });
                 
                 html += `

@@ -1,12 +1,12 @@
 """
-统一智能Agent - 支持API推荐和LangGraph工作流自动调用
-整合原有API推荐Agent和工作流编排Agent的能力
+统一智能Agent - 支持API推荐和多智能体协作
+整合原有API推荐Agent和多智能体自主规划能力
 """
 import json
 from typing import Dict, Any, List
 from openai import OpenAI
 import config
-from langgraph_workflows import workflow_executor
+from multi_agent_system import multi_agent_executor
 
 
 class EnhancedAgent:
@@ -158,47 +158,19 @@ class EnhancedAgent:
             }
         ]
     
-    def process_query(self, user_query: str, base_url: str = "http://localhost:5000") -> Dict[str, Any]:
-        """
-        处理用户查询，自动决策是直接调用API还是使用LangGraph工作流
+    def process_query(self, user_query: str, base_url: str = None) -> Dict[str, Any]:
+        """处理用户查询的主入口 - 直接使用多智能体系统"""
         
-        Args:
-            user_query: 用户的自然语言查询
-            base_url: API基础URL
-            
-        Returns:
-            包含处理结果的字典
-        """
-        # Step 1: 使用LLM分析用户需求
-        analysis = self._analyze_query(user_query)
-        
-        if not analysis['success']:
+        if not user_query:
             return {
                 'success': False,
-                'error': analysis['error'],
-                'query': user_query
+                'query': '',
+                'execution_type': 'workflow',
+                'error': '查询内容不能为空'
             }
         
-        query_type = analysis['query_type']
-        scenario = analysis.get('scenario')
-        
-        # Step 2: 根据查询类型决策
-        if query_type == 'workflow' and scenario:
-            # 需要使用LangGraph工作流
-            return self._execute_workflow(scenario, analysis.get('params', {}), user_query)
-        elif query_type == 'api':
-            # API推荐模式
-            return self._recommend_api(user_query, analysis, base_url)
-        else:
-            # 无法识别的查询类型
-            return {
-                'success': False,
-                'query': user_query,
-                'execution_type': 'unknown',
-                'error': '无法识别查询意图',
-                'reason': analysis.get('reason', ''),
-                'suggestion': '请更明确地描述您的需求，例如："分析货车流量"或"核算通行费"'
-            }
+        # 直接使用多智能体协作系统处理所有查询
+        return self._execute_multi_agent(user_query)
     
     def _analyze_query(self, user_query: str) -> Dict[str, Any]:
         """使用LLM分析用户查询意图"""
@@ -245,64 +217,38 @@ class EnhancedAgent:
 11. exit-hourly-flow-k-anonymized - k匿名数据：隐私保护版本
     关键词：k匿名、隐私、脱敏、KACA、匿名化
 
-=== 工作流场景（3个）===
+=== 多智能体工作流模式 ===
 
-【场景1: 跨路段通行费核算】scenario1
-- 业务目标: 计算车辆跨路段通行的费用，进行结算和对账
-- 涉及主体: 入口收费站、出口收费站、结算中心
-- 执行步骤: 查询入口交易 → 查询出口交易 → 计算费用差异和优惠
-- 用户需求示例: 
-  * "帮我核算通行费"
-  * "计算收费金额"
-  * "费用结算"
-  * "通行费用统计"
-  * "收费对账"
-- 关键词: 核算、通行费、费用、结算、对账、收费、计算金额
+当用户需求需要多步骤、跨主体协作时，使用workflow模式：
+- 核算、结算、对账类业务（需要查询多个数据源并计算）
+- 异常检测、稽核、监测类业务（需要获取数据并分析异常）
+- 全网分析、整体统计类业务（需要聚合多个路段数据）
+- 任何需要"计算"、"综合分析"、"对比"的复杂需求
 
-【场景2: 异常交易稽核】scenario2
-- 业务目标: 检测异常交易，识别费用异常、时间异常等问题
-- 涉及主体: 监管部门、收费站、统计分析中心
-- 执行步骤: 获取交易数据 → 获取货车统计数据 → 基于统计方法检测异常
-- 用户需求示例:
-  * "检测异常交易"
-  * "稽核交易记录"
-  * "查找异常"
-  * "监测问题交易"
-  * "审查交易数据"
-- 关键词: 异常、稽核、检测、监测、审查、问题、异常值
-
-【场景3: 全网流量分析】scenario3
-- 业务目标: 统计整个路网的交通流量，识别繁忙路段，进行宏观分析
-- 涉及主体: 路网运营中心、各路段管理处、调度中心
-- 执行步骤: 获取所有路段 → 逐路段统计流量 → 聚合分析排名
-- 用户需求示例:
-  * "分析全网流量"
-  * "统计所有路段的车流量"
-  * "整体交通分析"
-  * "查看各路段流量情况"
-  * "全路网统计"
-- 关键词: 全网、整体、所有路段、路网、全路段、流量分析、车流量统计
+多智能体系统会自主：
+1. 理解需求并制定执行计划
+2. 决定调用哪些API
+3. 综合数据并生成分析结果
 
 === 匹配规则 ===
-1. 优先匹配工作流场景（核算、稽核、全网分析）
-2. 如果是货车数据分析（流量、拥堵、费用等），匹配API推荐
-3. API推荐适用于单一维度的统计分析
-4. 工作流适用于多步骤、跨主体的业务流程
+1. 单一维度查询 → api（直接推荐API）
+2. 多步骤/复杂业务 → workflow（启动多智能体协作）
 
 示例：
 - "分析货车流量" → api, recommended_apis: ["hourly-flow"]
 - "查看拥堵情况" → api, recommended_apis: ["congestion-index"]
 - "统计通行费用" → api, recommended_apis: ["avg-toll-fee"]
 - "检查超载" → api, recommended_apis: ["overweight-rate"]
-- "核算通行费" → workflow + scenario1（多步骤计算）
-- "检测异常交易" → workflow + scenario2（多步骤检测）
-- "分析全网流量" → workflow + scenario3（跨路段聚合）
+- "核算通行费" → workflow（多智能体自主规划）
+- "检测异常交易" → workflow（多智能体自主规划）
+- "分析全网流量" → workflow（多智能体自主规划）
+- "帮我计算..." → workflow（需要计算处理）
+- "对比分析..." → workflow（需要综合分析）
 
 请以JSON格式返回：
 {
     "success": true,
     "query_type": "api" | "workflow",
-    "scenario": "scenario1" | "scenario2" | "scenario3" | null,
     "recommended_apis": ["api_tag1", "api_tag2"],
     "params": {
         "start_date": "YYYY-MM-DD格式，从用户查询中提取，如'2023-11-15'",
@@ -628,27 +574,25 @@ class EnhancedAgent:
         
         return matched
     
-    def _execute_workflow(self, scenario: str, params: dict, user_query: str) -> Dict[str, Any]:
-        """执行LangGraph工作流"""
+    def _execute_multi_agent(self, user_query: str) -> Dict[str, Any]:
+        """执行多智能体协作任务"""
         
-        # 获取场景信息
-        scenario_info = workflow_executor.get_scenario_info(scenario)
+        print(f"[DEBUG] 启动多智能体协作系统")
+        print(f"[DEBUG] 用户查询: {user_query}")
         
-        # 打印调试信息
-        print(f"[DEBUG] 执行工作流: scenario={scenario}")
-        print(f"[DEBUG] 提取的参数: {params}")
-        
-        # 执行工作流
-        result = workflow_executor.execute(scenario, params)
+        # 执行多智能体协作
+        result = multi_agent_executor.execute(user_query)
         
         return {
             'success': result['success'],
             'query': user_query,
             'execution_type': 'workflow',
-            'scenario_name': scenario_info.get('name', scenario),
-            'scenario_description': scenario_info.get('description', ''),
+            'scenario_name': '多智能体自主规划',
+            'scenario_description': result.get('plan', {}).get('task_understanding', ''),
             'result': result.get('result', {}),
-            'execution_logs': result.get('logs', []),
+            'execution_logs': result.get('execution_logs', []),
+            'api_calls': result.get('api_calls', []),
+            'plan': result.get('plan', {}),
             'error': result.get('error', '')
         }
     

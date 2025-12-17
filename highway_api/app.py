@@ -16,8 +16,7 @@ from sqlalchemy import func, text, case, desc
 from sqlalchemy.sql import extract
 import random, math
 
-# 导入LangGraph工作流
-from langgraph_workflows import workflow_executor
+# 导入增强Agent（包含多智能体系统）
 from enhanced_agent import enhanced_agent
 
 # 导入模型和schemas
@@ -494,6 +493,52 @@ def get_exit_transactions():
             'total': total,
             'limit': limit,
             'offset': offset
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/transactions/exit/statistics', methods=['GET'])
+@require_api_key
+def get_exit_transaction_statistics():
+    """获取出口交易统计数据（聚合查询，避免返回全部数据）"""
+    try:
+        section_id = request.args.get('section_id')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        query = db.session.query(
+            func.count(ExitTransaction.id).label('total_count'),
+            func.sum(ExitTransaction.toll_money).label('total_toll'),
+            func.avg(ExitTransaction.toll_money).label('avg_toll'),
+            func.sum(ExitTransaction.real_money).label('total_real_money'),
+            func.count(func.distinct(ExitTransaction.section_id)).label('section_count')
+        )
+        
+        if section_id:
+            query = query.filter(ExitTransaction.section_id == section_id)
+        
+        if start_date:
+            query = query.filter(ExitTransaction.exit_time >= start_date)
+        
+        if end_date:
+            query = query.filter(ExitTransaction.exit_time <= end_date)
+        
+        result = query.first()
+        
+        return jsonify({
+            'success': True,
+            'statistics': {
+                'total_transactions': result.total_count or 0,
+                'total_toll_fee': float(result.total_toll or 0),
+                'average_toll_fee': float(result.avg_toll or 0),
+                'total_real_money': float(result.total_real_money or 0),
+                'unique_sections': result.section_count or 0
+            },
+            'query_params': {
+                'section_id': section_id,
+                'start_date': start_date,
+                'end_date': end_date
+            }
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1423,78 +1468,9 @@ def dgm_status():
         }), 500
 
 
-# ==================== LangGraph服务编排 API ====================
-
-@app.route('/api/workflow/execute', methods=['POST'])
-def workflow_execute():
-    """执行LangGraph工作流
-    
-    POST /api/workflow/execute
-    Body: {
-        "scenario": "scenario1|scenario2|scenario3",
-        "params": {...}
-    }
-    """
-    try:
-        data = request.get_json()
-        scenario = data.get('scenario', '')
-        params = data.get('params', {})
-        
-        if not scenario:
-            return jsonify({
-                'success': False,
-                'error': '请提供场景名称 (scenario1/scenario2/scenario3)'
-            }), 400
-        
-        # 执行工作流
-        result = workflow_executor.execute(scenario, params)
-        
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'工作流执行失败: {str(e)}'
-        }), 500
-
-
-@app.route('/api/workflow/scenarios', methods=['GET'])
-def workflow_scenarios():
-    """获取所有可用场景信息
-    
-    GET /api/workflow/scenarios
-    GET /api/workflow/scenarios?scenario=scenario1
-    """
-    try:
-        scenario = request.args.get('scenario', '')
-        
-        if scenario:
-            # 获取单个场景信息
-            info = workflow_executor.get_scenario_info(scenario)
-            if not info:
-                return jsonify({
-                    'success': False,
-                    'error': f'场景不存在: {scenario}'
-                }), 404
-            return jsonify({
-                'success': True,
-                'scenario': scenario,
-                'info': info
-            })
-        else:
-            # 获取所有场景信息
-            scenarios = {}
-            for s in ['scenario1', 'scenario2', 'scenario3']:
-                scenarios[s] = workflow_executor.get_scenario_info(s)
-            
-            return jsonify({
-                'success': True,
-                'scenarios': scenarios
-            })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+# ==================== 多智能体协作 API ====================
+# 注意：多智能体协作功能已集成到统一Agent中
+# 通过 /api/agent/query 接口使用，系统会自动判断是API推荐还是多智能体协作
 
 
 if __name__ == '__main__':
