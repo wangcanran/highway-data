@@ -172,6 +172,7 @@ def agent_query():
     try:
         data = request.get_json()
         user_query = data.get('query', '')
+        source = data.get('source', 'input')  # 默认为输入框输入
         
         if not user_query:
             return jsonify({'error': '请提供查询描述'}), 400
@@ -649,52 +650,6 @@ def get_exit_transactions():
             'total': total,
             'limit': limit,
             'offset': offset
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/transactions/exit/statistics', methods=['GET'])
-@require_api_key
-def get_exit_transaction_statistics():
-    """获取出口交易统计数据（聚合查询，避免返回全部数据）"""
-    try:
-        section_id = request.args.get('section_id')
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        
-        query = db.session.query(
-            func.count(ExitTransaction.id).label('total_count'),
-            func.sum(ExitTransaction.toll_money).label('total_toll'),
-            func.avg(ExitTransaction.toll_money).label('avg_toll'),
-            func.sum(ExitTransaction.real_money).label('total_real_money'),
-            func.count(func.distinct(ExitTransaction.section_id)).label('section_count')
-        )
-        
-        if section_id:
-            query = query.filter(ExitTransaction.section_id == section_id)
-        
-        if start_date:
-            query = query.filter(ExitTransaction.exit_time >= start_date)
-        
-        if end_date:
-            query = query.filter(ExitTransaction.exit_time <= end_date)
-        
-        result = query.first()
-        
-        return jsonify({
-            'success': True,
-            'statistics': {
-                'total_transactions': result.total_count or 0,
-                'total_toll_fee': float(result.total_toll or 0),
-                'average_toll_fee': float(result.avg_toll or 0),
-                'total_real_money': float(result.total_real_money or 0),
-                'unique_sections': result.section_count or 0
-            },
-            'query_params': {
-                'section_id': section_id,
-                'start_date': start_date,
-                'end_date': end_date
-            }
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
