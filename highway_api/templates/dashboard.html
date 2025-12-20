@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高速公路数据治理平台 - 管理后台</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: #1a2332;
+            --bg-hover: #232d3f;
+            --border-color: #2a3548;
+            --text-primary: #f0f4f8;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+            --gradient-green: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        .app-container { display: flex; min-height: 100vh; }
+        
+        /* 侧边栏 */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            z-index: 100;
+        }
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .logo { display: flex; align-items: center; gap: 12px; }
+        .logo-icon {
+            width: 40px; height: 40px;
+            background: var(--gradient-blue);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+        }
+        .logo-text { font-size: 16px; font-weight: 700; }
+        .logo-subtitle { font-size: 11px; color: var(--text-muted); }
+        .nav-menu { padding: 16px 12px; overflow-y: auto; }
+        .nav-section { margin-bottom: 24px; }
+        .nav-section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            padding: 0 12px;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-bottom: 4px;
+        }
+        .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .nav-item.active { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+        .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+        .nav-label { font-size: 14px; font-weight: 500; }
+        .nav-badge {
+            margin-left: auto;
+            background: var(--accent-red);
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        
+        /* 主内容 */
+        .main-content { flex: 1; margin-left: 260px; }
+        .topbar {
+            height: 64px;
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 32px;
+            position: sticky; top: 0; z-index: 50;
+        }
+        .page-title { font-size: 20px; font-weight: 600; }
+        .topbar-right { display: flex; align-items: center; gap: 16px; }
+        .refresh-btn {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 20px;
+            background: var(--gradient-blue);
+            border: none; border-radius: 10px;
+            color: white; font-size: 14px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .refresh-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+        .refresh-btn.loading .refresh-icon { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .topbar-btn {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .topbar-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .api-status {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        .api-status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--accent-yellow);
+        }
+        .api-status-dot.connected { background: var(--accent-green); }
+        .api-status-dot.error { background: var(--accent-red); }
+        .user-profile {
+            display: flex; align-items: center; gap: 12px;
+            padding: 6px 12px 6px 6px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px; cursor: pointer;
+        }
+        .user-avatar {
+            width: 32px; height: 32px;
+            background: var(--accent-purple);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 600;
+        }
+        .user-name { font-size: 13px; font-weight: 600; }
+        .user-role { font-size: 11px; color: var(--text-muted); }
+        .page-content { padding: 32px; }
+        
+        /* 错误提示横幅 */
+        .error-banner {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--accent-red);
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            display: none;
+        }
+        .error-banner.show { display: flex; align-items: center; gap: 12px; }
+        .error-banner-icon { font-size: 24px; }
+        .error-banner-content { flex: 1; }
+        .error-banner-title { font-weight: 600; margin-bottom: 4px; }
+        .error-banner-desc { font-size: 13px; color: var(--text-secondary); }
+        .error-banner-action {
+            padding: 8px 16px;
+            background: var(--accent-red);
+            border: none; border-radius: 6px;
+            color: white; cursor: pointer;
+            font-size: 13px;
+        }
+        
+        /* 统计卡片 */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            position: relative; overflow: hidden;
+            transition: all 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .stat-card::before {
+            content: '';
+            position: absolute; top: 0; right: 0;
+            width: 120px; height: 120px;
+            border-radius: 50%; opacity: 0.1;
+            transform: translate(30%, -30%);
+        }
+        .stat-card.blue::before { background: var(--accent-blue); }
+        .stat-card.green::before { background: var(--accent-green); }
+        .stat-card.yellow::before { background: var(--accent-yellow); }
+        .stat-card.red::before { background: var(--accent-red); }
+        .stat-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .stat-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+        }
+        .stat-card.blue .stat-icon { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+        .stat-card.green .stat-icon { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .stat-card.yellow .stat-icon { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); }
+        .stat-card.red .stat-icon { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+        .stat-value { font-size: 32px; font-weight: 700; margin-bottom: 4px; font-family: 'JetBrains Mono', monospace; }
+        .stat-label { font-size: 14px; color: var(--text-secondary); }
+        .stat-loading { color: var(--text-muted); font-size: 14px; }
+        
+        /* 图表 */
+        .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 32px; }
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+        }
+        .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .chart-title { font-size: 16px; font-weight: 600; }
+        .chart-btn {
+            padding: 6px 12px; font-size: 12px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 6px; cursor: pointer;
+            transition: all 0.2s; text-decoration: none;
+        }
+        .chart-btn:hover, .chart-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: white; }
+        .chart-container { height: 300px; }
+        
+        /* 表格 */
+        .table-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .table-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .table-title { font-size: 16px; font-weight: 600; }
+        .table-actions { display: flex; gap: 12px; }
+        .search-box {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px; width: 280px;
+        }
+        .search-box input {
+            flex: 1; background: transparent; border: none; outline: none;
+            color: var(--text-primary); font-size: 13px;
+        }
+        .search-box input::placeholder { color: var(--text-muted); }
+        .filter-btn {
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary); font-size: 13px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .filter-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th {
+            text-align: left; padding: 14px 24px;
+            font-size: 12px; font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.5px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .data-table td {
+            padding: 16px 24px; font-size: 13px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .data-table tr:hover { background: var(--bg-hover); }
+        .data-table tr:last-child td { border-bottom: none; }
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 10px; border-radius: 6px;
+            font-size: 12px; font-weight: 500;
+        }
+        .status-badge.success { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .status-badge.error { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+        .method-badge {
+            padding: 3px 8px; border-radius: 4px;
+            font-size: 11px; font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .method-badge.get { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .method-badge.post { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+        .method-badge.put { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); }
+        .method-badge.delete { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+        .api-path { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent-cyan); }
+        .response-time { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+        .response-time.fast { color: var(--accent-green); }
+        .response-time.normal { color: var(--accent-yellow); }
+        .response-time.slow { color: var(--accent-red); }
+        .table-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 24px;
+            background: var(--bg-secondary);
+        }
+        .table-info { font-size: 13px; color: var(--text-muted); }
+        .pagination { display: flex; gap: 8px; }
+        .page-btn {
+            width: 36px; height: 36px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 8px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .page-btn:hover, .page-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: white; }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        /* API列表 */
+        .api-list { display: grid; gap: 12px; }
+        .api-item {
+            display: flex; align-items: center;
+            padding: 16px 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px; transition: all 0.2s;
+        }
+        .api-item:hover { border-color: var(--accent-blue); transform: translateX(4px); }
+        .api-method { width: 60px; }
+        .api-info { flex: 1; margin-left: 16px; }
+        .api-name { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+        .api-desc { font-size: 12px; color: var(--text-muted); }
+        
+        /* 系统状态 */
+        .system-status { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .status-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+        }
+        .status-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        .status-dot.online { background: var(--accent-green); }
+        .status-dot.offline { background: var(--accent-red); }
+        .status-dot.warning { background: var(--accent-yellow); }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .status-label { color: var(--text-muted); margin-right: 8px; }
+        
+        /* Toast */
+        .toast-container {
+            position: fixed; top: 80px; right: 32px; z-index: 1000;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .toast {
+            padding: 16px 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            display: flex; align-items: center; gap: 12px;
+            animation: slideIn 0.3s ease;
+            min-width: 300px;
+        }
+        .toast.success { border-left: 4px solid var(--accent-green); }
+        .toast.error { border-left: 4px solid var(--accent-red); }
+        .toast.info { border-left: 4px solid var(--accent-blue); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .empty-state-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-state-text { font-size: 14px; }
+        .page-view { display: none; }
+        .page-view.active { display: block; }
+        
+        @media (max-width: 1400px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .charts-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr; } .sidebar { display: none; } .main-content { margin-left: 0; } }
+    </style>
+</head>
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="app-container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">🛣️</div>
+                    <div>
+                        <div class="logo-text">数据治理平台</div>
+                        <div class="logo-subtitle">Highway Data Governance</div>
+                    </div>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <div class="nav-section">
+                    <div class="nav-section-title">概览</div>
+                    <a href="#" class="nav-item active" data-page="dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label">Dashboard</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">数据管理</div>
+                    <a href="#" class="nav-item" data-page="data-management">
+                        <span class="nav-icon">🗄️</span>
+                        <span class="nav-label">数据集浏览</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">API服务</div>
+                    <a href="#" class="nav-item" data-page="api-list">
+                        <span class="nav-icon">🔌</span>
+                        <span class="nav-label">API列表</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="api-stats">
+                        <span class="nav-icon">📈</span>
+                        <span class="nav-label">调用统计</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">审计与安全</div>
+                    <a href="#" class="nav-item" data-page="audit-logs">
+                        <span class="nav-icon">📋</span>
+                        <span class="nav-label">审计日志</span>
+                        <span class="nav-badge" id="auditBadge">0</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="trace">
+                        <span class="nav-icon">🔗</span>
+                        <span class="nav-label">链路追踪</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">系统管理</div>
+                    <a href="#" class="nav-item" data-page="settings">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-label">系统设置</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 主内容 -->
+        <main class="main-content">
+            <header class="topbar">
+                <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                <div class="topbar-right">
+                    <div class="api-status" id="apiStatusIndicator">
+                        <div class="api-status-dot" id="apiStatusDot"></div>
+                        <span id="apiStatusText">检查连接中...</span>
+                    </div>
+                    <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">
+                        <span class="refresh-icon">🔄</span>
+                        <span>刷新数据</span>
+                    </button>
+                    <div class="user-profile">
+                        <div class="user-avatar">A</div>
+                        <div>
+                            <div class="user-name">管理员</div>
+                            <div class="user-role">Administrator</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard -->
+            <div class="page-view active" id="page-dashboard">
+                <div class="page-content">
+                    <!-- 错误提示 -->
+                    <div class="error-banner" id="errorBanner">
+                        <div class="error-banner-icon">⚠️</div>
+                        <div class="error-banner-content">
+                            <div class="error-banner-title">无法连接到后端API</div>
+                            <div class="error-banner-desc" id="errorBannerDesc">请检查API Key是否正确配置，或后端服务是否运行</div>
+                        </div>
+                        <button class="error-banner-action" onclick="navigateTo('settings')">配置设置</button>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card blue">
+                            <div class="stat-header">
+                                <div class="stat-icon">📡</div>
+                            </div>
+                            <div class="stat-value" id="totalApiCalls"><span class="stat-loading">加载中...</span></div>
+                            <div class="stat-label">总API调用次数</div>
+                        </div>
+                        <div class="stat-card green">
+                            <div class="stat-header">
+                                <div class="stat-icon">✅</div>
+                            </div>
+                            <div class="stat-value" id="successRate"><span class="stat-loading">加载中...</span></div>
+                            <div class="stat-label">请求成功率</div>
+                        </div>
+                        <div class="stat-card yellow">
+                            <div class="stat-header">
+                                <div class="stat-icon">⚡</div>
+                            </div>
+                            <div class="stat-value" id="avgResponseTime"><span class="stat-loading">加载中...</span></div>
+                            <div class="stat-label">平均响应时间(ms)</div>
+                        </div>
+                        <div class="stat-card red">
+                            <div class="stat-header">
+                                <div class="stat-icon">⚠️</div>
+                            </div>
+                            <div class="stat-value" id="errorCount"><span class="stat-loading">加载中...</span></div>
+                            <div class="stat-label">失败请求数</div>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3 class="chart-title">每小时API调用趋势</h3>
+                            </div>
+                            <div class="chart-container" id="trendChart"></div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3 class="chart-title">API调用分布</h3>
+                            </div>
+                            <div class="chart-container" id="distributionChart"></div>
+                        </div>
+                    </div>
+
+                    <div class="chart-card" style="margin-bottom: 32px;">
+                        <div class="chart-header">
+                            <h3 class="chart-title">系统状态</h3>
+                        </div>
+                        <div class="system-status">
+                            <div class="status-item">
+                                <div class="status-dot" id="dbStatus"></div>
+                                <div><span class="status-label">数据库:</span><span id="dbStatusText">检查中...</span></div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-dot" id="apiSvcStatus"></div>
+                                <div><span class="status-label">API服务:</span><span id="apiSvcStatusText">检查中...</span></div>
+                            </div>
+                            <div class="status-item">
+                                <div class="status-dot" id="auditSvcStatus"></div>
+                                <div><span class="status-label">审计系统:</span><span id="auditSvcStatusText">检查中...</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3 class="table-title">最近审计日志</h3>
+                            <a href="#" class="chart-btn" onclick="navigateTo('audit-logs'); return false;">查看全部 →</a>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>时间</th>
+                                    <th>操作类型</th>
+                                    <th>方法</th>
+                                    <th>API路径</th>
+                                    <th>状态</th>
+                                    <th>响应时间</th>
+                                    <th>客户端IP</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentLogsTable">
+                                <tr><td colspan="7" class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">加载中...</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 审计日志 -->
+            <div class="page-view" id="page-audit-logs">
+                <div class="page-content">
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3 class="table-title">审计日志详情</h3>
+                            <div class="table-actions">
+                                <div class="search-box">
+                                    <span>🔍</span>
+                                    <input type="text" id="auditSearchInput" placeholder="搜索API路径..." onkeyup="handleAuditSearch(event)">
+                                </div>
+                                <button class="filter-btn" onclick="toggleFilters()"><span>🎚️</span><span>筛选</span></button>
+                            </div>
+                        </div>
+                        <div id="filterPanel" style="display: none; padding: 16px 24px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
+                            <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+                                <div>
+                                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">操作类型</label>
+                                    <select id="filterOperationType" style="padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary);">
+                                        <option value="">全部</option>
+                                        <option value="AGENT_QUERY_COMPLETE">Agent查询</option>
+                                        <option value="AI_SQL_QUERY">AI SQL查询</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">状态</label>
+                                    <select id="filterSuccess" style="padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary);">
+                                        <option value="">全部</option>
+                                        <option value="true">成功</option>
+                                        <option value="false">失败</option>
+                                    </select>
+                                </div>
+                                <button onclick="applyFilters()" style="margin-top: 20px; padding: 8px 16px; background: var(--accent-blue); border: none; border-radius: 6px; color: white; cursor: pointer;">应用</button>
+                                <button onclick="resetFilters()" style="margin-top: 20px; padding: 8px 16px; background: transparent; border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-secondary); cursor: pointer;">重置</button>
+                            </div>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>ID</th><th>时间</th><th>操作类型</th><th>方法</th><th>API路径</th><th>状态码</th><th>响应时间</th><th>客户端IP</th><th>Trace ID</th></tr>
+                            </thead>
+                            <tbody id="auditLogsTable">
+                                <tr><td colspan="9" class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">加载中...</div></td></tr>
+                            </tbody>
+                        </table>
+                        <div class="table-footer">
+                            <div class="table-info" id="auditTableInfo">显示 0 条记录</div>
+                            <div class="pagination" id="auditPagination"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API列表 -->
+            <div class="page-view" id="page-api-list">
+                <div class="page-content">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">可用API接口</h3>
+                            <div class="search-box" style="width: 300px;">
+                                <span>🔍</span>
+                                <input type="text" id="apiSearchInput" placeholder="搜索API..." oninput="filterApiList()">
+                            </div>
+                        </div>
+                        <div class="api-list" id="apiListContainer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API统计 -->
+            <div class="page-view" id="page-api-stats">
+                <div class="page-content">
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <div class="chart-header"><h3 class="chart-title">API调用排行</h3></div>
+                            <div class="chart-container" id="apiRankingChart"></div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-header"><h3 class="chart-title">每小时调用分布</h3></div>
+                            <div class="chart-container" id="hourlyChart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 链路追踪 -->
+            <div class="page-view" id="page-trace">
+                <div class="page-content">
+                    <div class="chart-card">
+                        <div class="chart-header"><h3 class="chart-title">链路追踪查询</h3></div>
+                        <div style="padding: 20px;">
+                            <div style="display: flex; gap: 16px; align-items: flex-end;">
+                                <div style="flex: 1;">
+                                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Trace ID</label>
+                                    <input type="text" id="traceIdInput" placeholder="输入Trace ID进行查询..." style="width: 100%; padding: 12px 16px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace;">
+                                </div>
+                                <button onclick="searchTrace()" style="padding: 12px 24px; background: var(--gradient-blue); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 500;">查询链路</button>
+                            </div>
+                            <div id="traceResult" style="margin-top: 24px;">
+                                <div class="empty-state"><div class="empty-state-icon">🔗</div><div class="empty-state-text">输入Trace ID查询调用链路</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据集浏览 -->
+            <div class="page-view" id="page-data-management">
+                <div class="page-content">
+                    <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                        <div class="stat-card blue">
+                            <div class="stat-header"><div class="stat-icon">🛣️</div></div>
+                            <div class="stat-value" id="sectionCount"><span class="stat-loading">加载中...</span></div>
+                            <div class="stat-label">路段数量</div>
+                        </div>
+                        <div class="stat-card green">
+                            <div class="stat-header"><div class="stat-icon">🚏</div></div>
+                            <div class="stat-value" id="stationCount"><span class="stat-loading">加载中...</span></div>
+                            <div class="stat-label">收费站数量</div>
+                        </div>
+                        <div class="stat-card yellow">
+                            <div class="stat-header"><div class="stat-icon">🚧</div></div>
+                            <div class="stat-value" id="gantryCount"><span class="stat-loading">加载中...</span></div>
+                            <div class="stat-label">门架数量</div>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-header"><h3 class="chart-title">数据表概览</h3></div>
+                        <div id="dataTablesOverview" style="padding: 20px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 系统设置 -->
+            <div class="page-view" id="page-settings">
+                <div class="page-content">
+                    <div class="chart-card">
+                        <div class="chart-header"><h3 class="chart-title">系统设置</h3></div>
+                        <div style="padding: 20px;">
+                            <div style="margin-bottom: 24px; padding: 16px; background: rgba(59, 130, 246, 0.1); border: 1px solid var(--accent-blue); border-radius: 8px;">
+                                <strong>⚠️ 重要提示：</strong> 你的审计API需要 API Key 认证。请在下方填入你在 config.py 中配置的 API Key。
+                            </div>
+                            
+                            <div style="margin-bottom: 24px;">
+                                <h4 style="font-size: 14px; margin-bottom: 12px; color: var(--text-secondary);">API Key（必填，用于访问审计API）</h4>
+                                <div style="display: flex; gap: 16px;">
+                                    <input type="text" id="apiKeyInput" placeholder="输入你的API Key..." style="flex: 1; padding: 12px 16px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace;">
+                                    <button onclick="saveAndTest()" style="padding: 12px 24px; background: var(--gradient-blue); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 500;">保存并测试</button>
+                                </div>
+                                <div style="margin-top: 8px; font-size: 12px; color: var(--text-muted);">
+                                    API Key 在你的项目 config.py 文件中的 API_KEYS 列表里定义
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 24px;">
+                                <h4 style="font-size: 14px; margin-bottom: 12px; color: var(--text-secondary);">API基础地址（可选，留空使用当前域名）</h4>
+                                <div style="display: flex; gap: 16px; align-items: flex-end;">
+                                    <div style="flex: 1;">
+                                        <input type="text" id="apiBaseUrl" value="" placeholder="留空即可（自动使用当前服务器地址）" style="width: 100%; padding: 12px 16px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary);">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="padding: 16px; background: var(--bg-secondary); border-radius: 8px;">
+                                <h4 style="font-size: 14px; margin-bottom: 12px;">连接测试结果</h4>
+                                <div id="connectionTestResult" style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-muted);">
+                                    尚未测试
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ==================== 配置 ====================
+        let API_KEY = localStorage.getItem('dashboard_api_key') || '';
+        let API_BASE_URL = localStorage.getItem('dashboard_api_base') || '';
+        let currentPage = 1;
+        let currentFilters = {};
+        let isConnected = false;
+
+        // API列表
+        let API_LIST = [];  // 改为动态加载
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('apiKeyInput').value = API_KEY;
+            document.getElementById('apiBaseUrl').value = API_BASE_URL;
+            
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    navigateTo(this.dataset.page);
+                });
+            });
+            
+            initCharts();
+            renderApiList();
+            
+            // 首次加载检查连接
+            refreshData();
+        });
+
+        // ==================== 页面导航 ====================
+        function navigateTo(pageName) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.page === pageName);
+            });
+            document.querySelectorAll('.page-view').forEach(page => page.classList.remove('active'));
+            const targetPage = document.getElementById('page-' + pageName);
+            if (targetPage) targetPage.classList.add('active');
+            
+            const titles = { 'dashboard': 'Dashboard', 'data-management': '数据集浏览', 'api-list': 'API列表', 'api-stats': '调用统计', 'audit-logs': '审计日志', 'trace': '链路追踪', 'settings': '系统设置' };
+            document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
+            
+            if (pageName === 'audit-logs') loadAuditLogs();
+            else if (pageName === 'api-stats') loadApiStats();
+            else if (pageName === 'data-management') loadDataOverview();
+            else if (pageName === 'api-list') renderApiList();
+        }
+
+        // ==================== 数据刷新 ====================
+        async function refreshData() {
+            const btn = document.getElementById('refreshBtn');
+            btn.classList.add('loading');
+            
+            // 先检查健康状态
+            const healthOk = await checkHealth();
+            
+            if (healthOk) {
+                try {
+                    await Promise.all([loadDashboardStats(), loadRecentLogs()]);
+                    showToast('数据刷新成功', 'success');
+                } catch (error) {
+                    showToast('部分数据加载失败: ' + error.message, 'error');
+                }
+            }
+            
+            btn.classList.remove('loading');
+        }
+
+        async function checkHealth() {
+            try {
+                const response = await fetchApi('/api/health', false);
+                if (response.success) {
+                    setConnectionStatus(true, '已连接');
+                    updateSystemStatus('db', 'online', '已连接');
+                    updateSystemStatus('apiSvc', 'online', '正常运行');
+                    updateSystemStatus('auditSvc', 'online', '已启用');
+                    document.getElementById('errorBanner').classList.remove('show');
+                    isConnected = true;
+                    return true;
+                }
+            } catch (error) {
+                console.error('健康检查失败:', error);
+            }
+            
+            setConnectionStatus(false, '连接失败');
+            updateSystemStatus('db', 'warning', '未知');
+            updateSystemStatus('apiSvc', 'offline', '无法连接');
+            updateSystemStatus('auditSvc', 'warning', '未知');
+            
+            if (!API_KEY) {
+                document.getElementById('errorBannerDesc').textContent = '请先在"系统设置"中配置 API Key';
+            } else {
+                document.getElementById('errorBannerDesc').textContent = 'API Key 可能无效，或后端服务未运行';
+            }
+            document.getElementById('errorBanner').classList.add('show');
+            isConnected = false;
+            return false;
+        }
+
+        function setConnectionStatus(connected, text) {
+            const dot = document.getElementById('apiStatusDot');
+            const textEl = document.getElementById('apiStatusText');
+            dot.className = 'api-status-dot ' + (connected ? 'connected' : 'error');
+            textEl.textContent = text;
+        }
+
+        function updateSystemStatus(type, status, text) {
+            const dot = document.getElementById(type + 'Status');
+            const textEl = document.getElementById(type + 'StatusText');
+            if (dot) dot.className = 'status-dot ' + status;
+            if (textEl) textEl.textContent = text;
+        }
+
+        async function loadDashboardStats() {
+            const response = await fetchApi('/api/audit/statistics', true);
+            if (response.success) {
+                const stats = response.statistics;
+                const totalRequests = stats.total_requests || 0;
+                const successRate = stats.success_rate || 0;
+                const avgTime = Math.round(stats.avg_response_time || 0);
+                const failedCount = totalRequests - Math.round(totalRequests * successRate / 100);
+                
+                document.getElementById('totalApiCalls').textContent = formatNumber(totalRequests);
+                document.getElementById('successRate').textContent = successRate + '%';
+                document.getElementById('avgResponseTime').textContent = avgTime;
+                document.getElementById('errorCount').textContent = formatNumber(failedCount);
+                document.getElementById('auditBadge').textContent = totalRequests > 99 ? '99+' : totalRequests;
+                
+                updateTrendChart(stats.hourly_distribution || []);
+                updateDistributionChart(stats.api_ranking || []);
+            } else {
+                throw new Error(response.error || '获取统计数据失败');
+            }
+        }
+
+        async function loadRecentLogs() {
+            const response = await fetchApi('/api/audit/logs?per_page=10', true);
+            if (response.success && response.data) {
+                renderRecentLogs(response.data);
+            } else {
+                throw new Error(response.error || '获取日志失败');
+            }
+        }
+
+        function renderRecentLogs(logs) {
+            const tbody = document.getElementById('recentLogsTable');
+            if (!logs || logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">暂无审计日志记录</div></td></tr>';
+                return;
+            }
+            tbody.innerHTML = logs.map(log => `
+                <tr>
+                    <td>${formatDateTime(log.created_at)}</td>
+                    <td>${log.operation_type || '-'}</td>
+                    <td><span class="method-badge ${(log.http_method || 'GET').toLowerCase()}">${log.http_method || 'GET'}</span></td>
+                    <td><span class="api-path">${log.api_endpoint || '-'}</span></td>
+                    <td><span class="status-badge ${log.is_success ? 'success' : 'error'}">${log.is_success ? '✓ 成功' : '✕ 失败'}</span></td>
+                    <td><span class="response-time ${getResponseTimeClass(log.response_time_ms)}">${log.response_time_ms || 0}ms</span></td>
+                    <td>${log.client_ip || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // ==================== 审计日志页面 ====================
+        async function loadAuditLogs(page = 1) {
+            currentPage = page;
+            const tbody = document.getElementById('auditLogsTable');
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="empty-state-text">加载中...</div></td></tr>';
+            
+            try {
+                let url = `/api/audit/logs?page=${page}&per_page=20`;
+                if (currentFilters.operation_type) url += `&operation_type=${currentFilters.operation_type}`;
+                if (currentFilters.is_success) url += `&is_success=${currentFilters.is_success}`;
+                if (currentFilters.api_endpoint) url += `&api_endpoint=${encodeURIComponent(currentFilters.api_endpoint)}`;
+                
+                const response = await fetchApi(url, true);
+                if (response.success) {
+                    renderAuditLogsTable(response.data);
+                    renderPagination(response.pagination);
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">加载失败: ${response.error}</div></td></tr>`;
+                }
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">加载失败: ${error.message}</div></td></tr>`;
+            }
+        }
+
+        function renderAuditLogsTable(logs) {
+            const tbody = document.getElementById('auditLogsTable');
+            if (!logs || logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">暂无日志记录</div></td></tr>';
+                return;
+            }
+            tbody.innerHTML = logs.map(log => `
+                <tr>
+                    <td>${log.id}</td>
+                    <td>${formatDateTime(log.created_at)}</td>
+                    <td>${log.operation_type || '-'}</td>
+                    <td><span class="method-badge ${(log.http_method || 'GET').toLowerCase()}">${log.http_method || 'GET'}</span></td>
+                    <td><span class="api-path">${log.api_endpoint || '-'}</span></td>
+                    <td><span class="status-badge ${(log.response_status || 200) < 400 ? 'success' : 'error'}">${log.response_status || '-'}</span></td>
+                    <td><span class="response-time ${getResponseTimeClass(log.response_time_ms)}">${log.response_time_ms || 0}ms</span></td>
+                    <td>${log.client_ip || '-'}</td>
+                    <td style="font-family: 'JetBrains Mono', monospace; font-size: 11px; cursor: pointer;" onclick="copyTraceId('${log.trace_id}')" title="点击复制">${(log.trace_id || '-').substring(0, 8)}...</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderPagination(pagination) {
+            if (!pagination) return;
+            document.getElementById('auditTableInfo').textContent = `显示 ${(pagination.page - 1) * pagination.per_page + 1} - ${Math.min(pagination.page * pagination.per_page, pagination.total)} 条，共 ${pagination.total} 条`;
+            const container = document.getElementById('auditPagination');
+            let html = `<button class="page-btn" onclick="loadAuditLogs(${pagination.page - 1})" ${pagination.page <= 1 ? 'disabled' : ''}>←</button>`;
+            const maxPages = Math.min(pagination.pages, 5);
+            for (let i = 1; i <= maxPages; i++) {
+                html += `<button class="page-btn ${i === pagination.page ? 'active' : ''}" onclick="loadAuditLogs(${i})">${i}</button>`;
+            }
+            html += `<button class="page-btn" onclick="loadAuditLogs(${pagination.page + 1})" ${pagination.page >= pagination.pages ? 'disabled' : ''}>→</button>`;
+            container.innerHTML = html;
+        }
+
+        function toggleFilters() {
+            const panel = document.getElementById('filterPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function applyFilters() {
+            currentFilters = {
+                operation_type: document.getElementById('filterOperationType').value,
+                is_success: document.getElementById('filterSuccess').value
+            };
+            loadAuditLogs(1);
+        }
+
+        function resetFilters() {
+            document.getElementById('filterOperationType').value = '';
+            document.getElementById('filterSuccess').value = '';
+            currentFilters = {};
+            loadAuditLogs(1);
+        }
+
+        function handleAuditSearch(event) {
+            if (event.key === 'Enter') {
+                currentFilters.api_endpoint = event.target.value;
+                loadAuditLogs(1);
+            }
+        }
+
+        function copyTraceId(traceId) {
+            if (!traceId || traceId === '-') return;
+            navigator.clipboard.writeText(traceId);
+            showToast('Trace ID已复制', 'success');
+        }
+
+        // ==================== 链路追踪 ====================
+        async function searchTrace() {
+            const traceId = document.getElementById('traceIdInput').value.trim();
+            if (!traceId) { showToast('请输入Trace ID', 'error'); return; }
+            const resultContainer = document.getElementById('traceResult');
+            resultContainer.innerHTML = '<div class="empty-state"><div class="empty-state-text">查询中...</div></div>';
+            try {
+                const response = await fetchApi(`/api/audit/trace/${traceId}`, true);
+                if (response.success && response.logs && response.logs.length > 0) {
+                    renderTraceResult(response);
+                } else {
+                    resultContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">❌</div><div class="empty-state-text">未找到该Trace ID的记录</div></div>';
+                }
+            } catch (error) {
+                resultContainer.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">查询失败: ${error.message}</div></div>`;
+            }
+        }
+
+        function renderTraceResult(data) {
+            const container = document.getElementById('traceResult');
+            let html = `<div style="background: var(--bg-secondary); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;"><span style="color: var(--text-muted);">Trace ID</span><span style="font-family: 'JetBrains Mono', monospace; color: var(--accent-cyan);">${data.trace_id}</span></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;"><span style="color: var(--text-muted);">总调用数</span><span style="font-weight: 600;">${data.total_calls}</span></div>
+                <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted);">总耗时</span><span style="font-family: 'JetBrains Mono', monospace;">${data.total_duration}ms</span></div>
+            </div><h4 style="margin-bottom: 12px; font-size: 14px;">调用链路</h4><div style="border-left: 2px solid var(--accent-blue); padding-left: 20px;">`;
+            data.logs.forEach(log => {
+                html += `<div style="position: relative; padding: 16px; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 12px;">
+                    <div style="position: absolute; left: -26px; top: 20px; width: 12px; height: 12px; background: var(--accent-blue); border-radius: 50%;"></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span class="method-badge ${(log.http_method || 'GET').toLowerCase()}">${log.http_method || 'GET'}</span><span style="font-size: 12px; color: var(--text-muted);">${formatDateTime(log.created_at)}</span></div>
+                    <div style="font-family: 'JetBrains Mono', monospace; color: var(--accent-cyan); margin-bottom: 8px;">${log.api_endpoint}</div>
+                    <div style="display: flex; gap: 16px; font-size: 12px;"><span class="status-badge ${log.is_success ? 'success' : 'error'}">${log.response_status}</span><span style="color: var(--text-muted);">耗时: ${log.response_time_ms}ms</span></div>
+                </div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // ==================== API列表 ====================
+        async function renderApiList() {
+            const container = document.getElementById('apiListContainer');
+            
+            try {
+                const response = await fetchApi('/api/list', false);
+                
+                if (response.success) {
+                    API_LIST = response.apis.map(api => ({
+                        method: api.method,
+                        path: api.endpoint,
+                        name: api.name,
+                        desc: api.description,
+                        auth: api.auth_required,
+                        category: api.category
+                    }));
+                    
+                    const categories = {};
+                    API_LIST.forEach(api => {
+                        if (!categories[api.category]) categories[api.category] = [];
+                        categories[api.category].push(api);
+                    });
+                    
+                    container.innerHTML = Object.entries(categories).map(([category, apis]) => `
+                        <div style="margin-bottom: 24px;">
+                            <div style="font-size: 13px; font-weight: 600; color: var(--accent-blue); margin-bottom: 12px; padding-left: 8px; border-left: 3px solid var(--accent-blue);">
+                                ${category}
+                            </div>
+                            ${apis.map(api => `
+                                <div class="api-item" data-path="${api.path.toLowerCase()}" data-name="${api.name.toLowerCase()}">
+                                    <div class="api-method"><span class="method-badge ${api.method.toLowerCase()}">${api.method}</span></div>
+                                    <div class="api-info">
+                                        <div class="api-name">${api.name}</div>
+                                        <div class="api-desc">${api.desc}</div>
+                                        <div class="api-path" style="margin-top: 4px;">${api.path}</div>
+                                    </div>
+                                    <div>${api.auth ? '<span style="font-size: 11px; padding: 2px 8px; background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); border-radius: 4px;">🔒 需认证</span>' : '<span style="font-size: 11px; padding: 2px 8px; background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border-radius: 4px;">公开</span>'}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('加载API列表失败:', error);
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">加载API列表失败，请检查连接</div>';
+            }
+        }
+        // ==================== API统计 ====================
+        async function loadApiStats() {
+            try {
+                const response = await fetchApi('/api/audit/statistics', true);
+                if (response.success) {
+                    updateApiRankingChart(response.statistics.api_ranking || []);
+                    updateHourlyChart(response.statistics.hourly_distribution || []);
+                }
+            } catch (error) {
+                console.error('加载API统计失败:', error);
+            }
+        }
+
+        // ==================== 数据集浏览 ====================
+        async function loadDataOverview() {
+            // 路段
+            try {
+                const r = await fetchApi('/api/sections', true);
+                document.getElementById('sectionCount').textContent = r.count || r.data?.length || 0;
+            } catch { document.getElementById('sectionCount').textContent = '无法获取'; }
+            
+            // 收费站
+            try {
+                const r = await fetchApi('/api/toll-stations', true);
+                document.getElementById('stationCount').textContent = r.count || r.data?.length || 0;
+            } catch { document.getElementById('stationCount').textContent = '无法获取'; }
+            
+            // 门架
+            try {
+                const r = await fetchApi('/api/gantries', true);
+                document.getElementById('gantryCount').textContent = r.count || r.data?.length || 0;
+            } catch { document.getElementById('gantryCount').textContent = '无法获取'; }
+
+            document.getElementById('dataTablesOverview').innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                    <div class="status-item" style="flex-direction: column; align-items: flex-start;"><div style="font-size: 14px; font-weight: 500; margin-bottom: 8px;">📊 section</div><div style="font-size: 12px; color: var(--text-muted);">路段基础信息</div></div>
+                    <div class="status-item" style="flex-direction: column; align-items: flex-start;"><div style="font-size: 14px; font-weight: 500; margin-bottom: 8px;">🚏 tollstation</div><div style="font-size: 12px; color: var(--text-muted);">收费站信息</div></div>
+                    <div class="status-item" style="flex-direction: column; align-items: flex-start;"><div style="font-size: 14px; font-weight: 500; margin-bottom: 8px;">🚧 gantry</div><div style="font-size: 12px; color: var(--text-muted);">门架设备信息</div></div>
+                    <div class="status-item" style="flex-direction: column; align-items: flex-start;"><div style="font-size: 14px; font-weight: 500; margin-bottom: 8px;">📥 entrancetransaction</div><div style="font-size: 12px; color: var(--text-muted);">入口交易记录</div></div>
+                    <div class="status-item" style="flex-direction: column; align-items: flex-start;"><div style="font-size: 14px; font-weight: 500; margin-bottom: 8px;">📤 exittransaction</div><div style="font-size: 12px; color: var(--text-muted);">出口交易记录</div></div>
+                    <div class="status-item" style="flex-direction: column; align-items: flex-start;"><div style="font-size: 14px; font-weight: 500; margin-bottom: 8px;">🔄 gantrytransaction</div><div style="font-size: 12px; color: var(--text-muted);">门架交易记录</div></div>
+                    <div class="status-item" style="flex-direction: column; align-items: flex-start;"><div style="font-size: 14px; font-weight: 500; margin-bottom: 8px;">📋 audit_logs</div><div style="font-size: 12px; color: var(--text-muted);">审计日志</div></div>
+                </div>`;
+        }
+
+        // ==================== 设置 ====================
+        async function saveAndTest() {
+            API_KEY = document.getElementById('apiKeyInput').value.trim();
+            API_BASE_URL = document.getElementById('apiBaseUrl').value.trim();
+            
+            localStorage.setItem('dashboard_api_key', API_KEY);
+            localStorage.setItem('dashboard_api_base', API_BASE_URL);
+            
+            const resultDiv = document.getElementById('connectionTestResult');
+            resultDiv.innerHTML = '<span style="color: var(--accent-yellow);">测试连接中...</span>';
+            
+            try {
+                // 测试健康检查（无需认证）
+                const healthRes = await fetchApi('/api/health', false);
+                if (!healthRes.success) {
+                    resultDiv.innerHTML = '<span style="color: var(--accent-red);">❌ 健康检查失败: ' + (healthRes.error || '未知错误') + '</span>';
+                    return;
+                }
+                
+                // 测试审计API（需要认证）
+                const auditRes = await fetchApi('/api/audit/statistics', true);
+                if (auditRes.success) {
+                    resultDiv.innerHTML = `<span style="color: var(--accent-green);">✅ 连接成功！</span><br>
+                        <span style="margin-top: 8px; display: block;">- 健康检查: 通过</span>
+                        <span>- 审计API认证: 通过</span>
+                        <span>- 总请求数: ${auditRes.statistics?.total_requests || 0}</span>`;
+                    showToast('连接测试成功！', 'success');
+                    
+                    // 刷新Dashboard数据
+                    setTimeout(() => {
+                        navigateTo('dashboard');
+                        refreshData();
+                    }, 1000);
+                } else {
+                    resultDiv.innerHTML = `<span style="color: var(--accent-red);">❌ 审计API认证失败</span><br>
+                        <span style="color: var(--text-muted);">错误: ${auditRes.error || '未授权访问'}</span><br>
+                        <span style="color: var(--text-muted);">请检查API Key是否正确</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span style="color: var(--accent-red);">❌ 连接失败: ${error.message}</span>`;
+            }
+        }
+
+        // ==================== 图表 ====================
+        let trendChart, distributionChart, rankingChart, hourlyChart;
+
+        function initCharts() {
+            trendChart = echarts.init(document.getElementById('trendChart'));
+            trendChart.setOption({
+                tooltip: { trigger: 'axis' },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: { type: 'category', data: [], axisLine: { lineStyle: { color: '#2a3548' } }, axisLabel: { color: '#94a3b8' } },
+                yAxis: { type: 'value', axisLine: { lineStyle: { color: '#2a3548' } }, axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#1a2332' } } },
+                series: [{ data: [], type: 'line', smooth: true, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(59,130,246,0.3)' }, { offset: 1, color: 'rgba(59,130,246,0.05)' }] } }, lineStyle: { color: '#3b82f6', width: 3 }, itemStyle: { color: '#3b82f6' } }]
+            });
+            
+            distributionChart = echarts.init(document.getElementById('distributionChart'));
+            distributionChart.setOption({
+                tooltip: { trigger: 'item' },
+                series: [{ type: 'pie', radius: ['50%', '80%'], label: { show: false }, data: [], itemStyle: { borderRadius: 6, borderColor: '#1a2332', borderWidth: 2 } }],
+                color: ['#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
+            });
+            
+            window.addEventListener('resize', () => { 
+                trendChart?.resize(); 
+                distributionChart?.resize(); 
+                rankingChart?.resize(); 
+                hourlyChart?.resize(); 
+            });
+        }
+
+        function updateTrendChart(data) {
+            if (!trendChart || !data || data.length === 0) return;
+            trendChart.setOption({ 
+                xAxis: { data: data.map(d => (d.hour || '0') + ':00') }, 
+                series: [{ data: data.map(d => d.count || 0) }] 
+            });
+        }
+
+        function updateDistributionChart(data) {
+            if (!distributionChart || !data || data.length === 0) return;
+            distributionChart.setOption({ 
+                series: [{ 
+                    data: data.slice(0, 5).map(d => ({ 
+                        name: d.endpoint?.split('/').pop() || 'unknown', 
+                        value: d.count || 0 
+                    })) 
+                }] 
+            });
+        }
+
+        function updateApiRankingChart(data) {
+            if (!data || data.length === 0) return;
+            if (!rankingChart) rankingChart = echarts.init(document.getElementById('apiRankingChart'));
+            rankingChart.setOption({
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: { type: 'value', axisLine: { lineStyle: { color: '#2a3548' } }, axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#1a2332' } } },
+                yAxis: { type: 'category', data: data.map(d => d.endpoint?.split('/').slice(-2).join('/') || 'unknown').reverse(), axisLine: { lineStyle: { color: '#2a3548' } }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
+                series: [{ type: 'bar', data: data.map(d => d.count).reverse(), itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: '#3b82f6' }, { offset: 1, color: '#06b6d4' }] }, borderRadius: [0, 4, 4, 0] }, barWidth: 20 }]
+            });
+        }
+
+        function updateHourlyChart(data) {
+            if (!data || data.length === 0) return;
+            if (!hourlyChart) hourlyChart = echarts.init(document.getElementById('hourlyChart'));
+            const hourlyData = new Array(24).fill(0);
+            data.forEach(d => { const h = parseInt(d.hour); if (!isNaN(h) && h >= 0 && h < 24) hourlyData[h] = d.count; });
+            hourlyChart.setOption({
+                tooltip: { trigger: 'axis' },
+                grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                xAxis: { type: 'category', data: Array.from({ length: 24 }, (_, i) => i + ':00'), axisLine: { lineStyle: { color: '#2a3548' } }, axisLabel: { color: '#94a3b8', interval: 2 } },
+                yAxis: { type: 'value', axisLine: { lineStyle: { color: '#2a3548' } }, axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#1a2332' } } },
+                series: [{ data: hourlyData, type: 'bar', itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#10b981' }, { offset: 1, color: '#059669' }] }, borderRadius: [4, 4, 0, 0] } }]
+            });
+        }
+
+        // ==================== API请求 ====================
+        async function fetchApi(endpoint, requireAuth = true) {
+            const url = API_BASE_URL + endpoint;
+            const headers = { 'Content-Type': 'application/json' };
+            
+            if (requireAuth && API_KEY) {
+                headers['X-API-Key'] = API_KEY;
+            }
+            
+            const response = await fetch(url, { headers });
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || data.message || `HTTP ${response.status}`);
+            }
+            
+            return data;
+        }
+
+        // ==================== 工具函数 ====================
+        function formatNumber(num) { return num == null ? '0' : num.toLocaleString(); }
+        
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        
+        function getResponseTimeClass(ms) { 
+            if (!ms) return 'normal'; 
+            if (ms < 200) return 'fast'; 
+            if (ms < 1000) return 'normal'; 
+            return 'slow'; 
+        }
+        
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span style="font-size: 18px;">${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.animation = 'slideIn 0.3s ease reverse'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+    </script>
+</body>
+</html>

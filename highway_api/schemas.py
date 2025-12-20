@@ -3,8 +3,9 @@ Marshmallow序列化Schema
 用于API数据的序列化和验证
 """
 from flask_marshmallow import Marshmallow
-from marshmallow import fields
+from marshmallow import fields, Schema
 from models import Section, TollStation, Gantry, EntranceTransaction, ExitTransaction, GantryTransaction
+import json
 
 ma = Marshmallow()
 
@@ -56,6 +57,62 @@ class GantryTransactionSchema(ma.SQLAlchemyAutoSchema):
         load_instance = True
         include_fk = True
 
+class AuditLogSchema(Schema):
+    """审计日志序列化器"""
+    id = fields.Int(dump_only=True)
+    operation_type = fields.Str()
+    api_endpoint = fields.Str()
+    http_method = fields.Str()
+    
+    # 使用Method字段处理JSON字符串到Dict的转换
+    request_params = fields.Method("get_request_params")
+    request_body = fields.Method("get_request_body")
+    request_headers = fields.Method("get_request_headers")
+    
+    response_status = fields.Int()
+    response_body = fields.Method("get_response_body")
+    response_time_ms = fields.Int()
+    
+    user_id = fields.Str(allow_none=True)
+    session_id = fields.Str(allow_none=True)
+    user_agent = fields.Str()
+    
+    client_ip = fields.Str()
+    server_ip = fields.Str()
+    trace_id = fields.Str()
+    parent_trace_id = fields.Str(allow_none=True)
+    
+    created_at = fields.DateTime()
+    ended_at = fields.DateTime(allow_none=True)
+    
+    is_success = fields.Boolean()
+    error_message = fields.Str(allow_none=True)
+    
+    def _safe_json_load(self, value):
+        """安全地将JSON字符串转换为dict"""
+        if value is None:
+            return None
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except (json.JSONDecodeError, TypeError):
+                return {"_raw": value}
+        return {"_raw": str(value)}
+    
+    def get_request_params(self, obj):
+        return self._safe_json_load(getattr(obj, 'request_params', None))
+    
+    def get_request_body(self, obj):
+        return self._safe_json_load(getattr(obj, 'request_body', None))
+    
+    def get_request_headers(self, obj):
+        return self._safe_json_load(getattr(obj, 'request_headers', None))
+    
+    def get_response_body(self, obj):
+        return self._safe_json_load(getattr(obj, 'response_body', None))
+
 
 # 创建Schema实例
 section_schema = SectionSchema()
@@ -75,3 +132,6 @@ exit_transactions_schema = ExitTransactionSchema(many=True)
 
 gantry_transaction_schema = GantryTransactionSchema()
 gantry_transactions_schema = GantryTransactionSchema(many=True)
+
+audit_log_schema = AuditLogSchema()
+audit_logs_schema = AuditLogSchema(many=True)
