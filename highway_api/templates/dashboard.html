@@ -1062,9 +1062,14 @@
             const container = document.getElementById('apiListContainer');
             
             try {
+                // 不需要认证来获取API列表
                 const response = await fetchApi('/api/list', false);
                 
-                if (response.success) {
+                console.log('API列表响应:', response); // 调试日志
+                
+                if (response.success && response.apis) {
+                    console.log(`成功获取 ${response.apis.length} 个API`); // 调试日志
+                    
                     API_LIST = response.apis.map(api => ({
                         method: api.method,
                         path: api.endpoint,
@@ -1080,28 +1085,46 @@
                         categories[api.category].push(api);
                     });
                     
-                    container.innerHTML = Object.entries(categories).map(([category, apis]) => `
-                        <div style="margin-bottom: 24px;">
-                            <div style="font-size: 13px; font-weight: 600; color: var(--accent-blue); margin-bottom: 12px; padding-left: 8px; border-left: 3px solid var(--accent-blue);">
-                                ${category}
-                            </div>
-                            ${apis.map(api => `
-                                <div class="api-item" data-path="${api.path.toLowerCase()}" data-name="${api.name.toLowerCase()}">
-                                    <div class="api-method"><span class="method-badge ${api.method.toLowerCase()}">${api.method}</span></div>
-                                    <div class="api-info">
-                                        <div class="api-name">${api.name}</div>
-                                        <div class="api-desc">${api.desc}</div>
-                                        <div class="api-path" style="margin-top: 4px;">${api.path}</div>
-                                    </div>
-                                    <div>${api.auth ? '<span style="font-size: 11px; padding: 2px 8px; background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); border-radius: 4px;">🔒 需认证</span>' : '<span style="font-size: 11px; padding: 2px 8px; background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border-radius: 4px;">公开</span>'}</div>
-                                </div>
-                            `).join('')}
+                    // 添加统计信息显示
+                    const totalApis = API_LIST.length;
+                    const totalCategories = Object.keys(categories).length;
+                    
+                    container.innerHTML = `
+                        <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-secondary); border-radius: 12px; display: flex; gap: 24px;">
+                            <div><span style="color: var(--text-muted); font-size: 13px;">API总数:</span> <span style="font-weight: 600; color: var(--accent-cyan); font-size: 18px; margin-left: 8px;">${totalApis}</span></div>
+                            <div><span style="color: var(--text-muted); font-size: 13px;">分类数:</span> <span style="font-weight: 600; color: var(--accent-green); font-size: 18px; margin-left: 8px;">${totalCategories}</span></div>
                         </div>
-                    `).join('');
+                        ${Object.entries(categories).map(([category, apis]) => `
+                            <div style="margin-bottom: 24px;">
+                                <div style="font-size: 13px; font-weight: 600; color: var(--accent-blue); margin-bottom: 12px; padding-left: 8px; border-left: 3px solid var(--accent-blue); display: flex; justify-content: space-between; align-items: center;">
+                                    <span>${category}</span>
+                                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">${apis.length} 个接口</span>
+                                </div>
+                                ${apis.map(api => `
+                                    <div class="api-item" data-path="${api.path.toLowerCase()}" data-name="${api.name.toLowerCase()}">
+                                        <div class="api-method"><span class="method-badge ${api.method.toLowerCase()}">${api.method}</span></div>
+                                        <div class="api-info">
+                                            <div class="api-name">${api.name}</div>
+                                            <div class="api-desc">${api.desc}</div>
+                                            <div class="api-path" style="margin-top: 4px;">${api.path}</div>
+                                        </div>
+                                        <div>${api.auth ? '<span style="font-size: 11px; padding: 2px 8px; background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); border-radius: 4px;">🔒 需认证</span>' : '<span style="font-size: 11px; padding: 2px 8px; background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border-radius: 4px;">公开</span>'}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `).join('')}
+                    `;
+                } else {
+                    console.error('API列表响应格式错误:', response);
+                    container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">API列表数据格式错误</div>';
                 }
             } catch (error) {
                 console.error('加载API列表失败:', error);
-                container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">加载API列表失败，请检查连接</div>';
+                container.innerHTML = `<div style="padding: 20px; text-align: center;">
+                    <div style="color: var(--accent-red); margin-bottom: 8px;">⚠️ 加载API列表失败</div>
+                    <div style="color: var(--text-muted); font-size: 13px;">${error.message}</div>
+                    <div style="color: var(--text-muted); font-size: 12px; margin-top: 8px;">请检查API服务器连接和配置</div>
+                </div>`;
             }
         }
         // ==================== API统计 ====================

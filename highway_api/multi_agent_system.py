@@ -14,6 +14,10 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, System
 from langchain_openai import ChatOpenAI
 from datetime import datetime, timedelta
 import config
+import uuid
+
+# 导入审计日志模型
+from models import db, AuditLog
 
 # API基础配置
 API_BASE_URL = "http://localhost:5000"
@@ -40,6 +44,7 @@ class MultiAgentState(TypedDict):
     execution_logs: List[str]  # 执行日志
     error: str
     next_agent: str  # 下一个执行的agent
+    parent_trace_id: str  # 父级追踪ID，用于审计
 
 
 # ==================== API工具定义 ====================
@@ -268,8 +273,14 @@ API_TOOLS = {
 }
 
 
-def execute_api_call(tool_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
-    """执行API调用"""
+def execute_api_call(tool_name: str, params: Dict[str, Any], parent_trace_id: str = None) -> Dict[str, Any]:
+    """执行API调用（带审计记录）
+    
+    Args:
+        tool_name: API工具名称
+        params: 调用参数
+        parent_trace_id: 父级追踪ID，用于关联调用链
+    """
     if tool_name not in API_TOOLS:
         return {"success": False, "error": f"未知的API工具: {tool_name}"}
     
@@ -277,19 +288,76 @@ def execute_api_call(tool_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
     endpoint = tool["endpoint"]
     method = tool["method"]
     
+    # 生成本次调用的trace_id
+    trace_id = str(uuid.uuid4())
+    
+    # 创建审计记录（调用前）
+    audit_log = None
+    try:
+        audit_log = AuditLog(
+            trace_id=trace_id,
+            parent_trace_id=parent_trace_id,
+            operation_type='MULTI_AGENT_API_CALL',
+            api_endpoint=endpoint,
+            http_method=method,
+            request_body=json.dumps(params),
+            created_at=datetime.now()
+        )
+        db.session.add(audit_log)
+        db.session.commit()
+        audit_log_id = audit_log.id
+    except Exception as e:
+        print(f"[WARN] 创建审计记录失败: {e}")
+        audit_log_id = None
+    
+    # 执行API调用
+    start_time = datetime.now()
     try:
         url = f"{API_BASE_URL}{endpoint}"
-        print(f"[API调用] {method} {url} params={params}")
+        print(f"[API调用] {method} {url} params={params} trace_id={trace_id}")
         
         if method == "GET":
             response = requests.get(url, params=params, timeout=30)
         else:
             response = requests.post(url, json=params, timeout=30)
         
+        end_time = datetime.now()
+        response_time_ms = int((end_time - start_time).total_seconds() * 1000)
+        
         data = response.json()
-        print(f"[API返回] success={data.get('success')}, count={data.get('count', len(data.get('data', [])))} records")
+        success = data.get('success', response.status_code == 200)
+        print(f"[API返回] success={success}, count={data.get('count', len(data.get('data', [])))} records, time={response_time_ms}ms")
+        
+        # 更新审计记录（调用后）
+        if audit_log:
+            try:
+                audit_log.response_status = response.status_code
+                audit_log.response_body = json.dumps(data)
+                audit_log.response_time_ms = response_time_ms
+                audit_log.is_success = success
+                audit_log.ended_at = end_time
+                db.session.commit()
+            except Exception as e:
+                print(f"[WARN] 更新审计记录失败: {e}")
+        
         return data
+        
     except Exception as e:
+        end_time = datetime.now()
+        response_time_ms = int((end_time - start_time).total_seconds() * 1000)
+        
+        # 更新审计记录（异常）
+        if audit_log:
+            try:
+                audit_log.response_status = 500
+                audit_log.response_body = json.dumps({"error": str(e)})
+                audit_log.response_time_ms = response_time_ms
+                audit_log.is_success = False
+                audit_log.ended_at = end_time
+                db.session.commit()
+            except Exception as e2:
+                print(f"[WARN] 更新审计记录失败: {e2}")
+        
         return {"success": False, "error": str(e)}
 
 
@@ -591,8 +659,9 @@ def data_fetcher_agent(state: MultiAgentState) -> MultiAgentState:
         # 解析参数中的依赖关系
         params = _resolve_param_dependencies(params, state['data_collected'])
         
-        # 执行API调用
-        result = execute_api_call(tool_name, params)
+        # 执行API调用（传递parent_trace_id用于审计）
+        parent_trace_id = state.get('parent_trace_id')
+        result = execute_api_call(tool_name, params, parent_trace_id=parent_trace_id)
         
         # 记录调用
         state['api_calls'].append({
@@ -791,8 +860,13 @@ class MultiAgentExecutor:
     def __init__(self):
         self.graph = build_multi_agent_graph()
     
-    def execute(self, user_query: str) -> Dict[str, Any]:
-        """执行多智能体协作任务"""
+    def execute(self, user_query: str, parent_trace_id: str = None) -> Dict[str, Any]:
+        """执行多智能体协作任务
+        
+        Args:
+            user_query: 用户查询
+            parent_trace_id: 父级追踪ID，用于关联调用链
+        """
         
         # 初始化状态
         initial_state = {
@@ -804,7 +878,8 @@ class MultiAgentExecutor:
             'analysis_result': {},
             'execution_logs': [],
             'error': '',
-            'next_agent': 'planner'
+            'next_agent': 'planner',
+            'parent_trace_id': parent_trace_id  # 传递追踪ID
         }
         
         print(f"\n{'='*60}")

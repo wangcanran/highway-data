@@ -211,8 +211,7 @@ def agent_query():
         # ==================== 审计功能结束 ====================
         
         # 使用统一Agent处理（支持API推荐和工作流）
-        response = enhanced_agent.process_query(user_query, request.host_url)
-        
+        response = enhanced_agent.process_query(user_query, request.host_url, source, trace_id=trace_id)
         # ==================== 更新审计记录 ====================
         end_time = datetime.now()
         duration_ms = int((end_time - start_time).total_seconds() * 1000)
@@ -314,7 +313,7 @@ def smart_agent_query():
             }), 400
         
         # 使用统一Agent处理
-        response = enhanced_agent.process_query(user_query, request.host_url)
+        response = enhanced_agent.process_query(user_query, request.host_url, trace_id=trace_id)
         
         return jsonify(response)
     except Exception as e:
@@ -1808,22 +1807,62 @@ def get_api_list():
     """获取所有可用的API列表"""
     try:
         api_list = [
+            # ==================== 基础数据 (6个) ====================
             {'name': '路段列表', 'endpoint': '/api/sections', 'method': 'GET', 'category': '基础数据', 'description': '获取所有路段信息', 'auth_required': False},
+            {'name': '单个路段', 'endpoint': '/api/sections/<section_id>', 'method': 'GET', 'category': '基础数据', 'description': '获取指定路段详细信息', 'auth_required': False},
             {'name': '收费站列表', 'endpoint': '/api/toll-stations', 'method': 'GET', 'category': '基础数据', 'description': '获取所有收费站信息', 'auth_required': False},
+            {'name': '单个收费站', 'endpoint': '/api/toll-stations/<station_id>', 'method': 'GET', 'category': '基础数据', 'description': '获取指定收费站详细信息', 'auth_required': False},
             {'name': '门架列表', 'endpoint': '/api/gantries', 'method': 'GET', 'category': '基础数据', 'description': '获取所有门架信息', 'auth_required': False},
-            {'name': '入口交易', 'endpoint': '/api/entrance-transactions', 'method': 'GET', 'category': '交易数据', 'description': '获取入口交易记录', 'auth_required': True},
-            {'name': '出口交易', 'endpoint': '/api/exit-transactions', 'method': 'GET', 'category': '交易数据', 'description': '获取出口交易记录', 'auth_required': True},
-            {'name': '门架交易', 'endpoint': '/api/gantry-transactions', 'method': 'GET', 'category': '交易数据', 'description': '获取门架交易记录', 'auth_required': True},
-            {'name': '货车分析', 'endpoint': '/api/stats/trucks', 'method': 'GET', 'category': '统计分析', 'description': '货车统计分析', 'auth_required': False},
-            {'name': '路径分析', 'endpoint': '/api/stats/paths', 'method': 'GET', 'category': '统计分析', 'description': '路径流量统计', 'auth_required': False},
-            {'name': '时段分析', 'endpoint': '/api/stats/hourly', 'method': 'GET', 'category': '统计分析', 'description': '时段分布统计', 'auth_required': False},
+            {'name': '单个门架', 'endpoint': '/api/gantries/<gantry_id>', 'method': 'GET', 'category': '基础数据', 'description': '获取指定门架详细信息', 'auth_required': False},
+            
+            # ==================== 交易数据 (3个) ====================
+            {'name': '入口交易', 'endpoint': '/api/transactions/entrance', 'method': 'GET', 'category': '交易数据', 'description': '获取入口交易记录', 'auth_required': True},
+            {'name': '出口交易', 'endpoint': '/api/transactions/exit', 'method': 'GET', 'category': '交易数据', 'description': '获取出口交易记录', 'auth_required': True},
+            {'name': '门架交易', 'endpoint': '/api/transactions/gantry', 'method': 'GET', 'category': '交易数据', 'description': '获取门架交易记录', 'auth_required': True},
+            
+            # ==================== 统计分析 (3个) ====================
+            {'name': '交通流量统计', 'endpoint': '/api/statistics/traffic-flow', 'method': 'GET', 'category': '统计分析', 'description': '按时段统计交通流量', 'auth_required': False},
+            {'name': '收入统计', 'endpoint': '/api/statistics/revenue', 'method': 'GET', 'category': '统计分析', 'description': '按路段或收费站统计收入', 'auth_required': False},
+            {'name': '车辆分布', 'endpoint': '/api/statistics/vehicle-distribution', 'method': 'GET', 'category': '统计分析', 'description': '车型分布统计', 'auth_required': False},
+            
+            # ==================== 货车分析 (12个)  ====================
+            {'name': '货车小时流量', 'endpoint': '/api/analytics/truck/hourly-flow', 'method': 'GET', 'category': '货车分析', 'description': '统计每个路段每小时通过的货车数量', 'auth_required': False},
+            {'name': '货车平均行驶时间', 'endpoint': '/api/analytics/truck/avg-travel-time', 'method': 'GET', 'category': '货车分析', 'description': '计算货车在各路段的平均行驶时间', 'auth_required': False},
+            {'name': '货车平均通行费', 'endpoint': '/api/analytics/truck/avg-toll-fee', 'method': 'GET', 'category': '货车分析', 'description': '按车型统计平均通行费用', 'auth_required': False},
+            {'name': '货车拥堵指数', 'endpoint': '/api/analytics/truck/congestion-index', 'method': 'GET', 'category': '货车分析', 'description': '基于流量和速度计算拥堵指数', 'auth_required': False},
+            {'name': '出口小时流量', 'endpoint': '/api/analytics/truck/exit-hourly-flow', 'method': 'GET', 'category': '货车分析', 'description': '统计出口货车小时流量', 'auth_required': False},
+            {'name': '出口流量K匿名化', 'endpoint': '/api/analytics/truck/exit-hourly-flow-k-anonymized', 'method': 'GET', 'category': '货车分析', 'description': '隐私保护的出口流量统计', 'auth_required': False},
+            {'name': '货车超重率', 'endpoint': '/api/analytics/truck/overweight-rate', 'method': 'GET', 'category': '货车分析', 'description': '统计货车超重情况', 'auth_required': False},
+            {'name': '货车优惠率', 'endpoint': '/api/analytics/truck/discount-rate', 'method': 'GET', 'category': '货车分析', 'description': '分析货车享受优惠的比例', 'auth_required': False},
+            {'name': '货车高峰时段', 'endpoint': '/api/analytics/truck/peak-hours', 'method': 'GET', 'category': '货车分析', 'description': '识别货车流量高峰时段', 'auth_required': False},
+            {'name': '货车平均轴数', 'endpoint': '/api/analytics/truck/avg-axle-count', 'method': 'GET', 'category': '货车分析', 'description': '按车型统计平均轴数', 'auth_required': False},
+            {'name': '车道利用率', 'endpoint': '/api/analytics/truck/lane-utilization', 'method': 'GET', 'category': '货车分析', 'description': '分析各车道货车通行情况', 'auth_required': False},
+            {'name': '收费站状态', 'endpoint': '/api/analytics/truck/toll-station-status', 'method': 'GET', 'category': '货车分析', 'description': '收费站货车通行状态监控', 'auth_required': False},
+            
+            # ==================== AI功能 (4个) ====================
             {'name': 'Agent查询', 'endpoint': '/api/agent/query', 'method': 'POST', 'category': 'AI功能', 'description': '智能Agent自然语言查询', 'auth_required': False},
-            {'name': 'SQL Agent', 'endpoint': '/api/ai-sql', 'method': 'POST', 'category': 'AI功能', 'description': '自然语言转SQL查询', 'auth_required': False},
+            {'name': 'Smart Query', 'endpoint': '/api/agent/smart-query', 'method': 'POST', 'category': 'AI功能', 'description': '智能查询增强版', 'auth_required': False},
+            {'name': 'SQL Agent', 'endpoint': '/api/ai/sql', 'method': 'POST', 'category': 'AI功能', 'description': '自然语言转SQL查询', 'auth_required': False},
+            {'name': 'SQL生成', 'endpoint': '/api/ai/sql/generate', 'method': 'POST', 'category': 'AI功能', 'description': '生成SQL查询语句', 'auth_required': False},
+            
+            # ==================== 数据生成 (5个) ====================
             {'name': '生成门架数据', 'endpoint': '/api/generate/gantry', 'method': 'GET', 'category': '数据生成', 'description': '生成模拟门架交易数据', 'auth_required': False},
+            {'name': 'DGM初始化', 'endpoint': '/api/dgm/initialize', 'method': 'POST', 'category': '数据生成', 'description': '初始化DGM模型', 'auth_required': False},
+            {'name': 'DGM生成', 'endpoint': '/api/dgm/generate', 'method': 'POST', 'category': '数据生成', 'description': 'DGM模型生成数据', 'auth_required': False},
+            {'name': 'DGM统计', 'endpoint': '/api/dgm/stats', 'method': 'GET', 'category': '数据生成', 'description': 'DGM生成数据统计', 'auth_required': False},
+            {'name': 'DGM状态', 'endpoint': '/api/dgm/status', 'method': 'GET', 'category': '数据生成', 'description': 'DGM模型状态', 'auth_required': False},
+            
+            # ==================== 审计系统 (3个) ====================
             {'name': '审计日志', 'endpoint': '/api/audit/logs', 'method': 'GET', 'category': '审计系统', 'description': '获取系统审计日志', 'auth_required': True},
             {'name': '审计统计', 'endpoint': '/api/audit/statistics', 'method': 'GET', 'category': '审计系统', 'description': '获取审计统计信息', 'auth_required': True},
-            {'name': '健康检查', 'endpoint': '/api/health', 'method': 'GET', 'category': '系统管理', 'description': '检查系统健康状态', 'auth_required': False}
+            {'name': '链路追踪', 'endpoint': '/api/audit/trace/<trace_id>', 'method': 'GET', 'category': '审计系统', 'description': '获取完整的调用链路', 'auth_required': True},
+            
+            # ==================== 系统管理 (3个) ====================
+            {'name': '健康检查', 'endpoint': '/api/health', 'method': 'GET', 'category': '系统管理', 'description': '检查系统健康状态', 'auth_required': False},
+            {'name': 'API列表', 'endpoint': '/api/list', 'method': 'GET', 'category': '系统管理', 'description': '获取所有可用API列表', 'auth_required': False},
+            {'name': '连接测试', 'endpoint': '/api/test/connection', 'method': 'GET', 'category': '系统管理', 'description': '测试数据库连接', 'auth_required': False},
         ]
+
         
         categories = {}
         for api in api_list:
