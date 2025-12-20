@@ -5,6 +5,7 @@ Highway API - 基于 Flask + SQLAlchemy + Marshmallow
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from datetime import datetime
+import json
 import os
 from functools import wraps
 from agent import HighwayAPIAgent
@@ -20,10 +21,11 @@ import random, math
 from enhanced_agent import enhanced_agent
 
 # 导入模型和schemas
-from models import db, Section, TollStation, Gantry, EntranceTransaction, ExitTransaction, GantryTransaction
+from models import db, Section, TollStation, Gantry, EntranceTransaction, ExitTransaction, GantryTransaction, AuditLog
 from schemas import ma, section_schema, sections_schema, toll_station_schema, toll_stations_schema
 from schemas import gantry_schema, gantries_schema, entrance_transaction_schema, entrance_transactions_schema
 from schemas import exit_transaction_schema, exit_transactions_schema, gantry_transaction_schema, gantry_transactions_schema
+from schemas import audit_log_schema, audit_logs_schema
 
 # 导入AI SQL Agent
 from ai_sql_agent import ai_sql_agent
@@ -46,6 +48,11 @@ ma.init_app(app)
 # 初始化Agent
 agent = HighwayAPIAgent()
 
+# 审计系统新增
+import uuid
+from datetime import datetime
+import json
+from typing import Dict
 
 @app.route("/data-synthesis", methods=["GET"])
 def data_synthesis_page():
@@ -160,17 +167,7 @@ def workflow_agent():
 @app.route('/api/agent/query', methods=['POST'])
 def agent_query():
     """统一Agent查询接口 - 自动决策API推荐或工作流编排
-    
-    POST /api/agent/query
-    Body: {
-        "query": "用户的自然语言查询"
-    }
-    
-    示例：
-    - "分析货车流量" -> 推荐流量相关API
-    - "查看拥堵情况" -> 推荐拥堵指数API
-    - "核算通行费" -> 执行场景1工作流
-    - "检测异常交易" -> 执行场景2工作流
+    集成行为审计功能
     """
     try:
         data = request.get_json()
@@ -179,12 +176,127 @@ def agent_query():
         if not user_query:
             return jsonify({'error': '请提供查询描述'}), 400
         
+        # ==================== 审计功能开始 ====================
+        # 生成追踪ID
+        trace_id = request.headers.get('X-Trace-ID', str(uuid.uuid4()))
+        
+        # 创建审计记录
+        start_time = datetime.now()
+        
+        audit_log = AuditLog(
+            trace_id=trace_id,
+            parent_trace_id=request.headers.get('X-Parent-Trace-ID'),
+            operation_type='AGENT_QUERY_START',
+            api_endpoint='/api/agent/query',
+            http_method='POST',
+            request_body=json.dumps({'query': user_query}),
+            request_headers=json.dumps(dict(request.headers)),
+            client_ip=request.remote_addr,
+            server_ip=request.host,
+            user_agent=request.user_agent.string,
+            user_id=request.headers.get('X-User-ID'),
+            session_id=request.headers.get('X-Session-ID'),
+            created_at=start_time
+        )
+        
+        # 尝试从API Key识别用户
+        api_key = request.headers.get('X-API-Key')
+        if api_key:
+            audit_log.user_id = f"api_key:{api_key[:8]}..."  # 脱敏处理
+        
+        db.session.add(audit_log)
+        db.session.commit()
+        audit_log_id = audit_log.id
+        # ==================== 审计功能结束 ====================
+        
         # 使用统一Agent处理（支持API推荐和工作流）
         response = enhanced_agent.process_query(user_query, request.host_url)
         
-        return jsonify(response)
+        # ==================== 更新审计记录 ====================
+        end_time = datetime.now()
+        duration_ms = int((end_time - start_time).total_seconds() * 1000)
+        
+        # 更新审计记录
+        audit_log.response_status = 200
+        
+        # 构建响应体数据（先构建字典，最后一次性序列化）
+        response_body_data = {
+            'execution_type': response.get('execution_type', 'unknown'),
+            'success': response.get('success', False),
+            'result_summary': _summarize_agent_result(response)
+        }
+        
+        # 记录执行类型和调用数量
+        if response.get('execution_type') == 'api':
+            recommendations = response.get('recommendations', [])
+            response_body_data['api_recommendations'] = len(recommendations)
+        elif response.get('execution_type') == 'workflow':
+            api_calls = response.get('api_calls', [])
+            response_body_data['api_calls'] = len(api_calls)
+        
+        audit_log.response_body = json.dumps(response_body_data)
+        audit_log.response_time_ms = duration_ms
+        audit_log.ended_at = end_time
+        audit_log.is_success = response.get('success', False)
+        audit_log.operation_type = 'AGENT_QUERY_COMPLETE'
+        
+        db.session.commit()
+        # ==================== 审计更新完成 ====================
+        
+        # 在响应中添加审计追踪信息
+        response['audit_trace'] = {
+            'trace_id': trace_id,
+            'execution_type': response.get('execution_type', 'unknown'),
+            'duration_ms': duration_ms,
+            'timestamp': end_time.isoformat(),
+            'success': response.get('success', False)
+        }
+        
+        # 添加追踪ID到响应头
+        response_obj = jsonify(response)
+        response_obj.headers['X-Trace-ID'] = trace_id
+        return response_obj
+        
     except Exception as e:
+        # 错误处理：更新审计记录
+        if 'audit_log' in locals() and 'audit_log_id' in locals():
+            try:
+                end_time = datetime.now()
+                duration_ms = int((end_time - start_time).total_seconds() * 1000)
+                
+                audit_log.response_status = 500
+                audit_log.response_body = json.dumps({'error': str(e)})
+                audit_log.response_time_ms = duration_ms
+                audit_log.ended_at = end_time
+                audit_log.is_success = False
+                audit_log.error_message = str(e)
+                audit_log.operation_type = 'AGENT_QUERY_ERROR'
+                
+                db.session.commit()
+            except Exception as audit_error:
+                print(f"[AUDIT ERROR] 更新审计记录失败: {str(audit_error)}")
+        
         return jsonify({'error': str(e)}), 500
+
+
+def _summarize_agent_result(result: Dict) -> Dict:
+    """总结Agent结果用于审计记录"""
+    summary = {
+        'execution_type': result.get('execution_type'),
+        'success': result.get('success', False)
+    }
+    
+    if result.get('execution_type') == 'api':
+        recommendations = result.get('recommendations', [])
+        summary['api_recommendations'] = len(recommendations)
+        summary['recommended_tags'] = [r.get('tag') for r in recommendations]
+    
+    elif result.get('execution_type') == 'workflow':
+        api_calls = result.get('api_calls', [])
+        summary['api_calls'] = len(api_calls)
+        summary['scenario_name'] = result.get('scenario_name')
+    
+    return summary
 
 
 @app.route('/api/agent/smart-query', methods=['POST'])
@@ -212,26 +324,70 @@ def smart_agent_query():
 
 @app.route('/api/ai/sql', methods=['POST'])
 def ai_sql_query():
-    """AI SQL查询接口 - 自然语言转SQL并执行"""
+    """AI SQL查询接口 - 自然语言转SQL并执行
+    集成审计功能
+    """
+    # ==================== 审计功能开始 ====================
+    trace_id = request.headers.get('X-Trace-ID', str(uuid.uuid4()))
+    start_time = datetime.now()
+    
+    audit_log = AuditLog(
+        trace_id=trace_id,
+        operation_type='AI_SQL_QUERY',
+        api_endpoint='/api/ai/sql',
+        http_method='POST',
+        client_ip=request.remote_addr,
+        user_agent=request.user_agent.string,
+        created_at=start_time
+    )
+    db.session.add(audit_log)
+    db.session.commit()
+    # ==================== 审计功能结束 ====================
+    
     try:
         data = request.get_json()
         user_query = data.get('query', '')
         
         if not user_query:
-            return jsonify({
-                'success': False,
-                'error': '请提供查询描述'
-            }), 400
+            audit_log.response_status = 400
+            audit_log.error_message = '请提供查询描述'
+            db.session.commit()
+            return jsonify({'success': False, 'error': '请提供查询描述'}), 400
+        
+        audit_log.request_body = json.dumps({'query': user_query})
+        db.session.commit()
         
         # 使用AI SQL Agent处理查询
         response = ai_sql_agent.process_query(user_query, request.host_url)
         
+        # 更新审计记录
+        end_time = datetime.now()
+        duration_ms = int((end_time - start_time).total_seconds() * 1000)
+        
+        audit_log.response_status = 200
+        audit_log.response_body = json.dumps({'success': response.get('success', False)})
+        audit_log.response_time_ms = duration_ms
+        audit_log.ended_at = end_time
+        audit_log.is_success = response.get('success', False)
+        db.session.commit()
+        
+        # 添加审计追踪
+        response['audit_trace_id'] = trace_id
         return jsonify(response)
+        
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        end_time = datetime.now()
+        duration_ms = int((end_time - start_time).total_seconds() * 1000)
+        
+        audit_log.response_status = 500
+        audit_log.response_body = json.dumps({'error': str(e)})
+        audit_log.response_time_ms = duration_ms
+        audit_log.ended_at = end_time
+        audit_log.is_success = False
+        audit_log.error_message = str(e)
+        db.session.commit()
+        
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/ai/sql/generate', methods=['POST'])
 def ai_sql_generate():
@@ -1472,6 +1628,258 @@ def dgm_status():
 # 注意：多智能体协作功能已集成到统一Agent中
 # 通过 /api/agent/query 接口使用，系统会自动判断是API推荐还是多智能体协作
 
+
+# ==================== 审计系统API ====================
+
+@app.route('/api/audit/logs', methods=['GET'])
+@require_api_key
+def get_audit_logs():
+    """获取审计日志（需要认证）"""
+    try:
+        # 分页参数
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        
+        # 过滤条件
+        operation_type = request.args.get('operation_type')
+        api_endpoint = request.args.get('api_endpoint')
+        user_id = request.args.get('user_id')
+        client_ip = request.args.get('client_ip')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        is_success = request.args.get('is_success')
+        trace_id = request.args.get('trace_id')
+        
+        # 构建查询
+        query = AuditLog.query
+        
+        if operation_type:
+            query = query.filter(AuditLog.operation_type == operation_type)
+        if api_endpoint:
+            query = query.filter(AuditLog.api_endpoint.like(f'%{api_endpoint}%'))
+        if user_id:
+            query = query.filter(AuditLog.user_id.like(f'%{user_id}%'))
+        if client_ip:
+            query = query.filter(AuditLog.client_ip == client_ip)
+        if start_date:
+            query = query.filter(AuditLog.created_at >= start_date)
+        if end_date:
+            query = query.filter(AuditLog.created_at <= end_date)
+        if is_success is not None:
+            query = query.filter(AuditLog.is_success == (is_success.lower() == 'true'))
+        if trace_id:
+            query = query.filter(AuditLog.trace_id == trace_id)
+        
+        # 排序和分页
+        pagination = query.order_by(desc(AuditLog.created_at))\
+                         .paginate(page=page, per_page=per_page, error_out=False)
+        
+        logs = pagination.items
+        
+        return jsonify({
+            'success': True,
+            'data': audit_logs_schema.dump(logs),
+            'pagination': {
+                'page': pagination.page,
+                'per_page': pagination.per_page,
+                'total': pagination.total,
+                'pages': pagination.pages
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/audit/trace/<trace_id>', methods=['GET'])
+@require_api_key
+def get_audit_trace(trace_id):
+    """获取完整的调用链路"""
+    try:
+        # 获取指定trace的所有日志
+        logs = AuditLog.query.filter(
+            db.or_(
+                AuditLog.trace_id == trace_id,
+                AuditLog.parent_trace_id == trace_id
+            )
+        ).order_by(AuditLog.created_at).all()
+        
+        # 构建调用树
+        trace_tree = _build_trace_tree(logs, trace_id)
+        
+        return jsonify({
+            'success': True,
+            'trace_id': trace_id,
+            'logs': audit_logs_schema.dump(logs),
+            'trace_tree': trace_tree,
+            'total_calls': len(logs),
+            'total_duration': _calculate_total_duration(logs)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/audit/statistics', methods=['GET'])
+@require_api_key
+def get_audit_statistics():
+    """获取审计统计信息"""
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        query = AuditLog.query
+        
+        if start_date:
+            query = query.filter(AuditLog.created_at >= start_date)
+        if end_date:
+            query = query.filter(AuditLog.created_at <= end_date)
+        
+        # 基础统计
+        total_requests = query.count()
+        success_requests = query.filter(AuditLog.is_success == True).count()
+        failed_requests = total_requests - success_requests
+        
+        # API调用频率排名
+        api_stats = db.session.query(
+            AuditLog.api_endpoint,
+            func.count().label('count'),
+            func.avg(AuditLog.response_time_ms).label('avg_time'),
+            func.sum(case((AuditLog.is_success == True, 1), else_=0)).label('success_count')
+        ).group_by(AuditLog.api_endpoint).order_by(desc('count')).limit(10).all()
+        
+        # 用户活跃度
+        user_stats = db.session.query(
+            AuditLog.user_id,
+            func.count().label('count'),
+            func.max(AuditLog.created_at).label('last_active')
+        ).filter(AuditLog.user_id.isnot(None)).group_by(AuditLog.user_id)\
+         .order_by(desc('count')).limit(10).all()
+        
+        # 时间分布
+        hourly_stats = db.session.query(
+            func.hour(AuditLog.created_at).label('hour'),
+            func.count().label('count')
+        ).group_by('hour').order_by('hour').all()
+        
+        return jsonify({
+            'success': True,
+            'statistics': {
+                'total_requests': total_requests,
+                'success_rate': round(success_requests / total_requests * 100, 2) if total_requests > 0 else 0,
+                'avg_response_time': db.session.query(func.avg(AuditLog.response_time_ms)).scalar() or 0,
+                'api_ranking': [
+                    {
+                        'endpoint': r.api_endpoint,
+                        'count': r.count,
+                        'avg_time': round(float(r.avg_time or 0), 2),
+                        'success_rate': round(r.success_count / r.count * 100, 2)
+                    } for r in api_stats
+                ],
+                'user_activity': [
+                    {
+                        'user_id': r.user_id,
+                        'request_count': r.count,
+                        'last_active': r.last_active.isoformat() if r.last_active else None
+                    } for r in user_stats
+                ],
+                'hourly_distribution': [
+                    {'hour': r.hour, 'count': r.count} for r in hourly_stats
+                ]
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def _build_trace_tree(logs, root_trace_id):
+    """构建调用树"""
+    tree = {}
+    
+    # 查找根节点
+    root_logs = [log for log in logs if log.trace_id == root_trace_id]
+    
+    for log in root_logs:
+        node = {
+            'id': log.id,
+            'trace_id': log.trace_id,
+            'api': log.api_endpoint,
+            'method': log.http_method,
+            'status': log.response_status,
+            'duration': log.response_time_ms,
+            'timestamp': log.created_at.isoformat(),
+            'children': []
+        }
+        
+        # 查找子调用
+        child_logs = [child for child in logs 
+                     if child.parent_trace_id == log.trace_id and child.id != log.id]
+        
+        for child in child_logs:
+            node['children'].append(_build_trace_tree([child], child.trace_id))
+        
+        tree = node
+    
+    return tree
+
+
+def _calculate_total_duration(logs):
+    """计算总持续时间"""
+    if not logs:
+        return 0
+    
+    start_times = [log.created_at for log in logs]
+    end_times = [log.ended_at for log in logs if log.ended_at]
+    
+    if not end_times:
+        return 0
+    
+    min_start = min(start_times)
+    max_end = max(end_times)
+    
+    return int((max_end - min_start).total_seconds() * 1000)
+
+
+# @app.route('/dashboard')
+# def admin_dashboard():
+#     """数据治理平台管理后台"""
+#     return render_template('dashboard.html')
+@app.route('/dashboard')
+def admin_dashboard():
+    return render_template('dashboard.html')
+
+
+
+@app.route('/api/list', methods=['GET'])
+def get_api_list():
+    """获取所有可用的API列表"""
+    try:
+        api_list = [
+            {'name': '路段列表', 'endpoint': '/api/sections', 'method': 'GET', 'category': '基础数据', 'description': '获取所有路段信息', 'auth_required': False},
+            {'name': '收费站列表', 'endpoint': '/api/toll-stations', 'method': 'GET', 'category': '基础数据', 'description': '获取所有收费站信息', 'auth_required': False},
+            {'name': '门架列表', 'endpoint': '/api/gantries', 'method': 'GET', 'category': '基础数据', 'description': '获取所有门架信息', 'auth_required': False},
+            {'name': '入口交易', 'endpoint': '/api/entrance-transactions', 'method': 'GET', 'category': '交易数据', 'description': '获取入口交易记录', 'auth_required': True},
+            {'name': '出口交易', 'endpoint': '/api/exit-transactions', 'method': 'GET', 'category': '交易数据', 'description': '获取出口交易记录', 'auth_required': True},
+            {'name': '门架交易', 'endpoint': '/api/gantry-transactions', 'method': 'GET', 'category': '交易数据', 'description': '获取门架交易记录', 'auth_required': True},
+            {'name': '货车分析', 'endpoint': '/api/stats/trucks', 'method': 'GET', 'category': '统计分析', 'description': '货车统计分析', 'auth_required': False},
+            {'name': '路径分析', 'endpoint': '/api/stats/paths', 'method': 'GET', 'category': '统计分析', 'description': '路径流量统计', 'auth_required': False},
+            {'name': '时段分析', 'endpoint': '/api/stats/hourly', 'method': 'GET', 'category': '统计分析', 'description': '时段分布统计', 'auth_required': False},
+            {'name': 'Agent查询', 'endpoint': '/api/agent/query', 'method': 'POST', 'category': 'AI功能', 'description': '智能Agent自然语言查询', 'auth_required': False},
+            {'name': 'SQL Agent', 'endpoint': '/api/ai-sql', 'method': 'POST', 'category': 'AI功能', 'description': '自然语言转SQL查询', 'auth_required': False},
+            {'name': '生成门架数据', 'endpoint': '/api/generate/gantry', 'method': 'GET', 'category': '数据生成', 'description': '生成模拟门架交易数据', 'auth_required': False},
+            {'name': '审计日志', 'endpoint': '/api/audit/logs', 'method': 'GET', 'category': '审计系统', 'description': '获取系统审计日志', 'auth_required': True},
+            {'name': '审计统计', 'endpoint': '/api/audit/statistics', 'method': 'GET', 'category': '审计系统', 'description': '获取审计统计信息', 'auth_required': True},
+            {'name': '健康检查', 'endpoint': '/api/health', 'method': 'GET', 'category': '系统管理', 'description': '检查系统健康状态', 'auth_required': False}
+        ]
+        
+        categories = {}
+        for api in api_list:
+            category = api['category']
+            if category not in categories:
+                categories[category] = []
+            categories[category].append(api)
+        
+        return jsonify({'success': True, 'total': len(api_list), 'categories': categories, 'apis': api_list})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(

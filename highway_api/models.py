@@ -153,3 +153,47 @@ class GantryTransaction(db.Model):
     
     def __repr__(self):
         return f'<GantryTransaction {self.gantry_transaction_id}: {self.pass_id}>'
+
+# 审计 新增部分
+class AuditLog(db.Model):
+    """审计日志表"""
+    __tablename__ = 'audit_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # 操作信息
+    operation_type = db.Column(db.String(50))  # 操作类型: API_CALL, AGENT_QUERY, SQL_EXECUTION等
+    api_endpoint = db.Column(db.String(255))   # API端点
+    http_method = db.Column(db.String(10))     # HTTP方法
+    
+    # 请求信息
+    request_params = db.Column(db.Text)        # 请求参数(JSON格式)
+    request_body = db.Column(db.Text)          # 请求体(JSON格式)
+    request_headers = db.Column(db.Text)       # 请求头(JSON格式)
+    
+    # 响应信息
+    response_status = db.Column(db.Integer)    # HTTP状态码
+    response_body = db.Column(db.Text)         # 响应体(截断)
+    response_time_ms = db.Column(db.Integer)   # 响应时间(毫秒)
+    
+    # 用户/会话信息
+    user_id = db.Column(db.String(100), nullable=True)      # 用户ID
+    session_id = db.Column(db.String(100), nullable=True)   # 会话ID
+    user_agent = db.Column(db.Text)                         # 用户代理
+    
+    # 系统信息
+    client_ip = db.Column(db.String(50))       # 客户端IP
+    server_ip = db.Column(db.String(50))       # 服务器IP
+    trace_id = db.Column(db.String(100))       # 追踪ID(用于跨API调用链路)
+    parent_trace_id = db.Column(db.String(100), nullable=True)  # 父追踪ID
+    
+    # 时间戳
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    ended_at = db.Column(db.DateTime, nullable=True)
+    
+    # 状态
+    is_success = db.Column(db.Boolean, default=True)  # 是否成功
+    error_message = db.Column(db.Text, nullable=True) # 错误信息
+    
+    def __repr__(self):
+        return f'<AuditLog {self.id}: {self.api_endpoint} - {self.response_status}>'
