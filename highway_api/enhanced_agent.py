@@ -158,18 +158,28 @@ class EnhancedAgent:
             }
         ]
     
-    def process_query(self, user_query: str, base_url: str = None) -> Dict[str, Any]:
-        """处理用户查询的主入口 - 直接使用多智能体系统"""
+    def process_query(self, user_query: str, base_url: str = None, source: str = 'input') -> Dict[str, Any]:
+        """处理用户查询的主入口
+        
+        Args:
+            user_query: 用户查询内容
+            base_url: API基础URL
+            source: 查询来源 ('tag' 标签点击 | 'input' 输入框输入)
+        """
         
         if not user_query:
             return {
                 'success': False,
                 'query': '',
-                'execution_type': 'workflow',
+                'execution_type': 'api',
                 'error': '查询内容不能为空'
             }
         
-        # 直接使用多智能体协作系统处理所有查询
+        # 标签点击：直接返回API信息，不调用LLM
+        if source == 'tag':
+            return self._get_tag_api_info(user_query, base_url or "http://localhost:5000")
+        
+        # 输入框输入：使用多智能体系统处理
         return self._execute_multi_agent(user_query)
     
     def _analyze_query(self, user_query: str) -> Dict[str, Any]:
@@ -573,6 +583,74 @@ class EnhancedAgent:
             matched = ['hourly-flow', 'avg-travel-time', 'congestion-index']
         
         return matched
+    
+    def _get_tag_api_info(self, tag_query: str, base_url: str) -> Dict[str, Any]:
+        """根据标签查询直接返回API信息（不调用LLM）- 使用旧版本agent.py的完整API定义"""
+        
+        # 引入旧版本agent的完整API定义
+        from agent import HighwayAPIAgent
+        old_agent = HighwayAPIAgent()
+        
+        # 标签关键词映射到旧版本的tag
+        tag_mapping = {
+            '货车流量分析': 'hourly-flow',
+            '货车通行时间': 'avg-travel-time',
+            '货车通行费分析': 'avg-toll-fee',
+            '货车拥堵指数': 'congestion-index',
+            '货车超载监测': 'overweight-rate',
+            '货车优惠分析': 'discount-rate',
+            '货车高峰时段': 'peak-hours',
+            '货车轴数分析': 'avg-axle-count',
+            '车道利用率': 'lane-utilization',
+            '出口流量': 'exit-hourly-flow',
+            '货车出口交易数据k匿名': 'exit-hourly-flow-k-anonymized',
+            '收费站运行状态': 'toll-station-status'
+        }
+        
+        # 根据查询内容查找对应的tag
+        api_tag = None
+        for keyword, tag in tag_mapping.items():
+            if keyword in tag_query:
+                api_tag = tag
+                break
+        
+        if not api_tag:
+            api_tag = 'hourly-flow'  # 默认
+        
+        # 直接从旧版本agent的API知识库中查找对应的API定义
+        # 而不是调用process_query（那个会调用LLM）
+        matched_apis = []
+        for category_name, category_data in old_agent.api_knowledge.items():
+            for api_def in category_data.get('apis', []):
+                # 根据endpoint匹配API
+                if api_tag in api_def.get('endpoint', ''):
+                    matched_apis.append(api_def)
+                    break
+        
+        if not matched_apis:
+            return {
+                'success': False,
+                'query': tag_query,
+                'execution_type': 'api',
+                'error': f'未找到对应的API: {api_tag}'
+            }
+        
+        # 构建返回格式（模拟旧版本agent的返回格式）
+        api_tag_info = old_agent.api_tags.get(api_tag, {})
+        
+        return {
+            'success': True,
+            'understood': True,
+            'query': tag_query,
+            'execution_type': 'api',
+            'explanation': f'为您推荐 {api_tag_info.get("name", "")} API',
+            'requirement_analysis': {
+                'scenario': '货车数据分析',
+                'tag_names': [api_tag_info.get('name', api_tag)]
+            },
+            'recommendations': matched_apis,
+            'count': len(matched_apis)
+        }
     
     def _execute_multi_agent(self, user_query: str) -> Dict[str, Any]:
         """执行多智能体协作任务"""

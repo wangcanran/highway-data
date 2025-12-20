@@ -662,12 +662,51 @@
             }
         });
 
-        // Fill tag text to input and trigger query
-        function queryByTag(tagName) {
+        // Tag click: directly get API info without LLM
+        async function queryByTag(tagName) {
             const input = document.getElementById('queryInput');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            
+            // 填充输入框显示查询内容
             if (input) {
                 input.value = tagName;
-                queryByInput();
+            }
+            
+            // 显示加载状态
+            loading.classList.remove('hidden');
+            results.classList.add('hidden');
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/agent/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        query: tagName,
+                        source: 'tag'  // 标记为标签点击
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('标签查询响应:', data);
+                
+                loading.classList.add('hidden');
+                
+                if (data.success) {
+                    displayUnifiedResults(data);
+                    results.classList.remove('hidden');
+                    
+                    setTimeout(() => {
+                        results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                } else {
+                    showErrorMessage(data.error || '查询失败', null);
+                }
+            } catch (error) {
+                loading.classList.add('hidden');
+                showErrorMessage('查询服务出现问题，请稍后重试', null, error.message);
             }
         }
 
@@ -702,7 +741,10 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ query: query })
+                    body: JSON.stringify({ 
+                        query: query,
+                        source: 'input'  // 标记为输入框输入
+                    })
                 });
 
                 const data = await response.json();

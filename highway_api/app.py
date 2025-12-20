@@ -163,24 +163,24 @@ def agent_query():
     
     POST /api/agent/query
     Body: {
-        "query": "用户的自然语言查询"
+        "query": "用户的自然语言查询",
+        "source": "tag" | "input"  (可选，默认"input")
     }
     
     示例：
-    - "分析货车流量" -> 推荐流量相关API
-    - "查看拥堵情况" -> 推荐拥堵指数API
-    - "核算通行费" -> 执行场景1工作流
-    - "检测异常交易" -> 执行场景2工作流
+    - 标签点击: {"query": "货车流量分析", "source": "tag"} -> 直接返回API信息
+    - 输入框输入: {"query": "核算通行费", "source": "input"} -> 多智能体处理
     """
     try:
         data = request.get_json()
         user_query = data.get('query', '')
+        source = data.get('source', 'input')  # 默认为输入框输入
         
         if not user_query:
             return jsonify({'error': '请提供查询描述'}), 400
         
-        # 使用统一Agent处理（支持API推荐和工作流）
-        response = enhanced_agent.process_query(user_query, request.host_url)
+        # 使用统一Agent处理
+        response = enhanced_agent.process_query(user_query, request.host_url, source)
         
         return jsonify(response)
     except Exception as e:
@@ -493,52 +493,6 @@ def get_exit_transactions():
             'total': total,
             'limit': limit,
             'offset': offset
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/transactions/exit/statistics', methods=['GET'])
-@require_api_key
-def get_exit_transaction_statistics():
-    """获取出口交易统计数据（聚合查询，避免返回全部数据）"""
-    try:
-        section_id = request.args.get('section_id')
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        
-        query = db.session.query(
-            func.count(ExitTransaction.id).label('total_count'),
-            func.sum(ExitTransaction.toll_money).label('total_toll'),
-            func.avg(ExitTransaction.toll_money).label('avg_toll'),
-            func.sum(ExitTransaction.real_money).label('total_real_money'),
-            func.count(func.distinct(ExitTransaction.section_id)).label('section_count')
-        )
-        
-        if section_id:
-            query = query.filter(ExitTransaction.section_id == section_id)
-        
-        if start_date:
-            query = query.filter(ExitTransaction.exit_time >= start_date)
-        
-        if end_date:
-            query = query.filter(ExitTransaction.exit_time <= end_date)
-        
-        result = query.first()
-        
-        return jsonify({
-            'success': True,
-            'statistics': {
-                'total_transactions': result.total_count or 0,
-                'total_toll_fee': float(result.total_toll or 0),
-                'average_toll_fee': float(result.avg_toll or 0),
-                'total_real_money': float(result.total_real_money or 0),
-                'unique_sections': result.section_count or 0
-            },
-            'query_params': {
-                'section_id': section_id,
-                'start_date': start_date,
-                'end_date': end_date
-            }
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
