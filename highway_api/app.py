@@ -101,66 +101,10 @@ def _truncate_for_audit(data: any, max_length: int = MAX_RESPONSE_BODY_LENGTH) -
         return json.dumps({'_error': f'序列化失败: {str(e)}'})
 
 
-def _safe_audit_commit(audit_log, db_session):
-    """
-    安全地提交审计记录，处理各种异常情况
-    """
-    try:
-        db_session.commit()
-        return True
-    except Exception as e:
-        print(f"[AUDIT ERROR] 提交审计记录失败: {e}")
-        try:
-            db_session.rollback()
-        except:
-            pass
-        return False
-
-
-def _safe_audit_update(audit_log, db_session, **kwargs):
-    """
-    安全地更新审计记录
-    """
-    try:
-        # 先回滚任何未完成的事务
-        try:
-            db_session.rollback()
-        except:
-            pass
-        
-        # 重新获取审计记录（避免detached instance问题）
-        if audit_log and audit_log.id:
-            fresh_log = db_session.get(AuditLog, audit_log.id)
-            if fresh_log:
-                for key, value in kwargs.items():
-                    if key == 'response_body' and value:
-                        # 确保response_body被截断
-                        value = _truncate_for_audit(value)
-                    if key == 'error_message' and value and len(str(value)) > MAX_ERROR_MESSAGE_LENGTH:
-                        value = str(value)[:MAX_ERROR_MESSAGE_LENGTH] + '...[TRUNCATED]'
-                    setattr(fresh_log, key, value)
-                db_session.commit()
-                return True
-    except Exception as e:
-        print(f"[AUDIT ERROR] 更新审计记录失败: {e}")
-        try:
-            db_session.rollback()
-        except:
-            pass
-    return False
-
-
-# ==================== 全局审计中间件 ====================
-# 已经有独立审计逻辑的API（中间件跳过，避免重复记录）
-SELF_AUDITED_APIS = {
-    '/api/agent/query',      # 有详细的AGENT_QUERY审计
-    '/api/ai/sql',           # 有详细的AI_SQL_QUERY审计
-}
-
+# ==================== 全局审计中间件（唯一审计入口）====================
 # 不需要审计的路径前缀（Dashboard、审计系统自身、静态资源等）
 EXCLUDED_PREFIXES = (
-    '/api/audit/',           # 审计系统自身的API
-    '/dashboard',            # Dashboard页面
+    '/api/audit/',           # 审计系统自身的API（Dashboard用）
     '/static/',              # 静态资源
     '/_debug_toolbar/',      # 调试工具栏
 )
@@ -171,9 +115,10 @@ EXCLUDED_PATHS = {
     '/truck-agent',          # 页面
     '/old-index',            # 页面
     '/workflow-agent',       # 页面
+    '/dashboard',            # Dashboard页面
     '/data-synthesis',       # 页面
     '/dgm-generation',       # 页面
-    '/api/health',           # 健康检查（频繁调用）
+    '/api/health',           # 健康检查（Dashboard轮询）
     '/api/list',             # API列表（Dashboard用）
     '/api/test/connection',  # 连接测试
 }
@@ -181,13 +126,9 @@ EXCLUDED_PATHS = {
 
 @app.before_request
 def global_audit_before_request():
-    """请求前：创建审计记录"""
+    """请求前：创建审计记录（唯一审计入口）"""
     # 跳过非API请求
     if not request.path.startswith('/api/'):
-        return
-    
-    # 跳过已有独立审计的API
-    if request.path in SELF_AUDITED_APIS:
         return
     
     # 跳过排除的路径前缀
@@ -204,6 +145,15 @@ def global_audit_before_request():
     
     try:
         trace_id = request.headers.get('X-Trace-ID', str(uuid.uuid4()))
+        
+        # 确定操作类型
+        operation_type = 'API_CALL'
+        if '/api/agent/query' in request.path:
+            operation_type = 'AGENT_QUERY'
+        elif '/api/ai/sql' in request.path:
+            operation_type = 'AI_SQL_QUERY'
+        elif '/api/agent/smart-query' in request.path:
+            operation_type = 'SMART_QUERY'
         
         # 获取请求体（对于POST/PUT请求）
         request_body = None
@@ -225,7 +175,7 @@ def global_audit_before_request():
         audit_log = AuditLog(
             trace_id=trace_id,
             parent_trace_id=request.headers.get('X-Parent-Trace-ID'),
-            operation_type='API_CALL',
+            operation_type=operation_type,  # 使用动态确定的操作类型
             api_endpoint=request.path,
             http_method=request.method,
             request_params=request_params,
@@ -283,6 +233,7 @@ def global_audit_after_request(response):
                         'success': data.get('success'),
                         'count': data.get('count'),
                         'total': data.get('total'),
+                        'execution_type': data.get('execution_type'),  # Agent执行类型
                         'data_count': len(data.get('data', [])) if isinstance(data.get('data'), list) else None,
                         'error': str(data.get('error', ''))[:200] if data.get('error') else None
                     }, ensure_ascii=False)
@@ -423,13 +374,8 @@ def workflow_agent():
 @app.route('/api/agent/query', methods=['POST'])
 def agent_query():
     """统一Agent查询接口 - 自动决策API推荐或工作流编排
-    集成行为审计功能（已修复响应体过长问题）
+    审计由全局中间件统一处理
     """
-    audit_log = None
-    audit_log_id = None
-    start_time = datetime.now()
-    trace_id = request.headers.get('X-Trace-ID', str(uuid.uuid4()))
-    
     try:
         data = request.get_json()
         user_query = data.get('query', '')
@@ -438,88 +384,16 @@ def agent_query():
         if not user_query:
             return jsonify({'error': '请提供查询描述'}), 400
         
-        # ==================== 审计功能开始 ====================
-        try:
-            audit_log = AuditLog(
-                trace_id=trace_id,
-                parent_trace_id=request.headers.get('X-Parent-Trace-ID'),
-                operation_type='AGENT_QUERY',
-                api_endpoint='/api/agent/query',
-                http_method='POST',
-                request_body=json.dumps({'query': user_query[:1000]}),  # 限制查询长度
-                client_ip=request.remote_addr,
-                server_ip=request.host,
-                user_agent=request.user_agent.string[:500] if request.user_agent.string else None,
-                user_id=request.headers.get('X-User-ID'),
-                session_id=request.headers.get('X-Session-ID'),
-                created_at=start_time
-            )
-            
-            # 尝试从API Key识别用户
-            api_key = request.headers.get('X-API-Key')
-            if api_key:
-                audit_log.user_id = f"api_key:{api_key[:8]}..."
-            
-            db.session.add(audit_log)
-            db.session.commit()
-            audit_log_id = audit_log.id
-        except Exception as audit_err:
-            print(f"[AUDIT WARNING] 创建审计记录失败: {audit_err}")
-            try:
-                db.session.rollback()
-            except:
-                pass
-        # ==================== 审计功能结束 ====================
+        # 从请求上下文获取trace_id（由全局中间件设置）
+        trace_id = getattr(request, '_audit_trace_id', None) or request.headers.get('X-Trace-ID', str(uuid.uuid4()))
         
         # 使用统一Agent处理（支持API推荐和工作流）
         response = enhanced_agent.process_query(user_query, request.host_url, source, trace_id=trace_id)
-        
-        # ==================== 更新审计记录 ====================
-        end_time = datetime.now()
-        duration_ms = int((end_time - start_time).total_seconds() * 1000)
-        
-        if audit_log_id:
-            # 构建响应摘要（避免存储完整响应）
-            response_summary = {
-                'execution_type': response.get('execution_type', 'unknown'),
-                'success': response.get('success', False),
-            }
-            
-            # 记录执行类型和调用数量
-            if response.get('execution_type') == 'api':
-                recommendations = response.get('recommendations', [])
-                response_summary['api_recommendations'] = len(recommendations)
-                response_summary['recommended_tags'] = [r.get('tag') for r in recommendations[:5]]
-            elif response.get('execution_type') == 'workflow':
-                api_calls = response.get('api_calls', [])
-                response_summary['api_calls_count'] = len(api_calls)
-                response_summary['scenario_name'] = response.get('scenario_name')
-                # 如果有数据结果，只记录数量
-                if 'data' in response and isinstance(response['data'], list):
-                    response_summary['data_count'] = len(response['data'])
-                if 'count' in response:
-                    response_summary['count'] = response['count']
-                if 'total' in response:
-                    response_summary['total'] = response['total']
-            
-            _safe_audit_update(
-                audit_log, db.session,
-                response_status=200,
-                response_body=response_summary,  # 使用摘要而非完整响应
-                response_time_ms=duration_ms,
-                ended_at=end_time,
-                is_success=response.get('success', False),
-                operation_type='AGENT_QUERY_COMPLETE'
-            )
-        # ==================== 审计更新完成 ====================
         
         # 在响应中添加审计追踪信息
         response['audit_trace'] = {
             'trace_id': trace_id,
             'execution_type': response.get('execution_type', 'unknown'),
-            'duration_ms': duration_ms,
-            'timestamp': end_time.isoformat(),
-            'success': response.get('success', False)
         }
         
         # 添加追踪ID到响应头
@@ -528,43 +402,7 @@ def agent_query():
         return response_obj
         
     except Exception as e:
-        # 错误处理：更新审计记录
-        end_time = datetime.now()
-        duration_ms = int((end_time - start_time).total_seconds() * 1000)
-        
-        if audit_log_id:
-            _safe_audit_update(
-                audit_log, db.session,
-                response_status=500,
-                response_body={'error': str(e)[:500]},
-                response_time_ms=duration_ms,
-                ended_at=end_time,
-                is_success=False,
-                error_message=str(e)[:MAX_ERROR_MESSAGE_LENGTH],
-                operation_type='AGENT_QUERY_ERROR'
-            )
-        
         return jsonify({'error': str(e)}), 500
-
-
-def _summarize_agent_result(result: Dict) -> Dict:
-    """总结Agent结果用于审计记录"""
-    summary = {
-        'execution_type': result.get('execution_type'),
-        'success': result.get('success', False)
-    }
-    
-    if result.get('execution_type') == 'api':
-        recommendations = result.get('recommendations', [])
-        summary['api_recommendations'] = len(recommendations)
-        summary['recommended_tags'] = [r.get('tag') for r in recommendations]
-    
-    elif result.get('execution_type') == 'workflow':
-        api_calls = result.get('api_calls', [])
-        summary['api_calls'] = len(api_calls)
-        summary['scenario_name'] = result.get('scenario_name')
-    
-    return summary
 
 
 @app.route('/api/agent/smart-query', methods=['POST'])
@@ -596,98 +434,26 @@ def smart_agent_query():
 @app.route('/api/ai/sql', methods=['POST'])
 def ai_sql_query():
     """AI SQL查询接口 - 自然语言转SQL并执行
-    集成审计功能（已修复响应体过长问题）
+    审计由全局中间件统一处理
     """
-    # ==================== 审计功能开始 ====================
-    trace_id = request.headers.get('X-Trace-ID', str(uuid.uuid4()))
-    start_time = datetime.now()
-    audit_log = None
-    
-    try:
-        audit_log = AuditLog(
-            trace_id=trace_id,
-            operation_type='AI_SQL_QUERY',
-            api_endpoint='/api/ai/sql',
-            http_method='POST',
-            client_ip=request.remote_addr,
-            user_agent=request.user_agent.string[:500] if request.user_agent.string else None,
-            created_at=start_time
-        )
-        db.session.add(audit_log)
-        db.session.commit()
-    except Exception as e:
-        print(f"[AUDIT WARNING] 创建审计记录失败: {e}")
-        try:
-            db.session.rollback()
-        except:
-            pass
-    # ==================== 审计功能结束 ====================
-    
     try:
         data = request.get_json()
         user_query = data.get('query', '')
         
         if not user_query:
-            if audit_log:
-                _safe_audit_update(
-                    audit_log, db.session,
-                    response_status=400,
-                    error_message='请提供查询描述',
-                    ended_at=datetime.now()
-                )
             return jsonify({'success': False, 'error': '请提供查询描述'}), 400
         
-        if audit_log:
-            _safe_audit_update(
-                audit_log, db.session,
-                request_body=json.dumps({'query': user_query[:1000]})
-            )
+        # 从请求上下文获取trace_id
+        trace_id = getattr(request, '_audit_trace_id', None) or request.headers.get('X-Trace-ID', str(uuid.uuid4()))
         
         # 使用AI SQL Agent处理查询
         response = ai_sql_agent.process_query(user_query, request.host_url)
-        
-        # 更新审计记录
-        end_time = datetime.now()
-        duration_ms = int((end_time - start_time).total_seconds() * 1000)
-        
-        if audit_log:
-            # 构建响应摘要
-            response_summary = {
-                'success': response.get('success', False),
-                'has_sql': 'sql' in response,
-                'has_data': 'data' in response,
-            }
-            if 'data' in response and isinstance(response['data'], list):
-                response_summary['data_count'] = len(response['data'])
-            
-            _safe_audit_update(
-                audit_log, db.session,
-                response_status=200,
-                response_body=response_summary,
-                response_time_ms=duration_ms,
-                ended_at=end_time,
-                is_success=response.get('success', False)
-            )
         
         # 添加审计追踪
         response['audit_trace_id'] = trace_id
         return jsonify(response)
         
     except Exception as e:
-        end_time = datetime.now()
-        duration_ms = int((end_time - start_time).total_seconds() * 1000)
-        
-        if audit_log:
-            _safe_audit_update(
-                audit_log, db.session,
-                response_status=500,
-                response_body={'error': str(e)[:500]},
-                response_time_ms=duration_ms,
-                ended_at=end_time,
-                is_success=False,
-                error_message=str(e)[:MAX_ERROR_MESSAGE_LENGTH]
-            )
-        
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/ai/sql/generate', methods=['POST'])
