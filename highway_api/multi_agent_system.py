@@ -273,13 +273,14 @@ API_TOOLS = {
 }
 
 
-def execute_api_call(tool_name: str, params: Dict[str, Any], parent_trace_id: str = None) -> Dict[str, Any]:
+def execute_api_call(tool_name: str, params: Dict[str, Any], parent_trace_id: str = None, client_info: Dict[str, str] = None) -> Dict[str, Any]:
     """执行API调用（带审计记录）
     
     Args:
         tool_name: API工具名称
         params: 调用参数
         parent_trace_id: 父级追踪ID，用于关联调用链
+        client_info: 客户端信息（client_ip, user_agent），从外层传入
     """
     if tool_name not in API_TOOLS:
         return {"success": False, "error": f"未知的API工具: {tool_name}"}
@@ -291,6 +292,22 @@ def execute_api_call(tool_name: str, params: Dict[str, Any], parent_trace_id: st
     # 生成本次调用的trace_id
     trace_id = str(uuid.uuid4())
     
+    # 获取客户端信息（如果没有传入则尝试从Flask请求上下文获取）
+    client_ip = None
+    user_agent = None
+    if client_info:
+        client_ip = client_info.get('client_ip')
+        user_agent = client_info.get('user_agent')
+    else:
+        # 尝试从Flask请求上下文获取
+        try:
+            from flask import request, has_request_context
+            if has_request_context():
+                client_ip = request.remote_addr
+                user_agent = request.user_agent.string[:500] if request.user_agent and request.user_agent.string else None
+        except Exception:
+            pass
+    
     # 创建审计记录（调用前）
     audit_log = None
     try:
@@ -301,6 +318,8 @@ def execute_api_call(tool_name: str, params: Dict[str, Any], parent_trace_id: st
             api_endpoint=endpoint,
             http_method=method,
             request_body=json.dumps(params),
+            client_ip=client_ip,  # 添加客户端IP
+            user_agent=user_agent,  # 添加User-Agent
             created_at=datetime.now()
         )
         db.session.add(audit_log)
@@ -329,16 +348,31 @@ def execute_api_call(tool_name: str, params: Dict[str, Any], parent_trace_id: st
         print(f"[API返回] success={success}, count={data.get('count', len(data.get('data', [])))} records, time={response_time_ms}ms")
         
         # 更新审计记录（调用后）
-        if audit_log:
+        if audit_log_id:
             try:
-                audit_log.response_status = response.status_code
-                audit_log.response_body = json.dumps(data)
-                audit_log.response_time_ms = response_time_ms
-                audit_log.is_success = success
-                audit_log.ended_at = end_time
-                db.session.commit()
+                # 重新获取审计记录（避免session问题）
+                db.session.rollback()  # 先回滚任何未完成的事务
+                fresh_log = db.session.get(AuditLog, audit_log_id)
+                if fresh_log:
+                    fresh_log.response_status = response.status_code
+                    # 截断响应体，避免数据库字段溢出
+                    response_summary = {
+                        'success': data.get('success'),
+                        'count': data.get('count'),
+                        'total': data.get('total'),
+                        'data_count': len(data.get('data', [])) if isinstance(data.get('data'), list) else None
+                    }
+                    fresh_log.response_body = json.dumps(response_summary, ensure_ascii=False)
+                    fresh_log.response_time_ms = response_time_ms
+                    fresh_log.is_success = success
+                    fresh_log.ended_at = end_time
+                    db.session.commit()
             except Exception as e:
                 print(f"[WARN] 更新审计记录失败: {e}")
+                try:
+                    db.session.rollback()
+                except:
+                    pass
         
         return data
         
@@ -347,16 +381,23 @@ def execute_api_call(tool_name: str, params: Dict[str, Any], parent_trace_id: st
         response_time_ms = int((end_time - start_time).total_seconds() * 1000)
         
         # 更新审计记录（异常）
-        if audit_log:
+        if audit_log_id:
             try:
-                audit_log.response_status = 500
-                audit_log.response_body = json.dumps({"error": str(e)})
-                audit_log.response_time_ms = response_time_ms
-                audit_log.is_success = False
-                audit_log.ended_at = end_time
-                db.session.commit()
+                db.session.rollback()
+                fresh_log = db.session.get(AuditLog, audit_log_id)
+                if fresh_log:
+                    fresh_log.response_status = 500
+                    fresh_log.response_body = json.dumps({"error": str(e)[:500]})
+                    fresh_log.response_time_ms = response_time_ms
+                    fresh_log.is_success = False
+                    fresh_log.ended_at = end_time
+                    db.session.commit()
             except Exception as e2:
                 print(f"[WARN] 更新审计记录失败: {e2}")
+                try:
+                    db.session.rollback()
+                except:
+                    pass
         
         return {"success": False, "error": str(e)}
 
