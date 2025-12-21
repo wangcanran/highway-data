@@ -158,13 +158,14 @@ class EnhancedAgent:
             }
         ]
     
-    def process_query(self, user_query: str, base_url: str = None, source: str = 'input') -> Dict[str, Any]:
+    def process_query(self, user_query: str, base_url: str = None, source: str = 'input', trace_id: str = None) -> Dict[str, Any]:
         """处理用户查询的主入口
         
         Args:
             user_query: 用户查询内容
             base_url: API基础URL
             source: 查询来源 ('tag' 标签点击 | 'input' 输入框输入)
+            trace_id: 审计追踪ID，用于关联调用链路
         """
         
         if not user_query:
@@ -180,7 +181,7 @@ class EnhancedAgent:
             return self._get_tag_api_info(user_query, base_url or "http://localhost:5000")
         
         # 输入框输入：使用多智能体系统处理
-        return self._execute_multi_agent(user_query)
+        return self._execute_multi_agent(user_query, trace_id)
     
     def _analyze_query(self, user_query: str) -> Dict[str, Any]:
         """使用LLM分析用户查询意图"""
@@ -652,14 +653,14 @@ class EnhancedAgent:
             'count': len(matched_apis)
         }
     
-    def _execute_multi_agent(self, user_query: str) -> Dict[str, Any]:
+    def _execute_multi_agent(self, user_query: str, trace_id: str = None) -> Dict[str, Any]:
         """执行多智能体协作任务"""
         
         print(f"[DEBUG] 启动多智能体协作系统")
         print(f"[DEBUG] 用户查询: {user_query}")
         
         # 执行多智能体协作
-        result = multi_agent_executor.execute(user_query)
+        result = multi_agent_executor.execute(user_query, parent_trace_id=trace_id)
         
         return {
             'success': result['success'],
@@ -671,7 +672,8 @@ class EnhancedAgent:
             'execution_logs': result.get('execution_logs', []),
             'api_calls': result.get('api_calls', []),
             'plan': result.get('plan', {}),
-            'error': result.get('error', '')
+            'error': result.get('error', ''),
+            'trace_id': trace_id  # 添加trace_id，便于追踪
         }
     
 # 全局实例
